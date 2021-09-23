@@ -18,6 +18,7 @@ import (
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_video_transcoder"
 	//_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_samba"
 	. "github.com/mickael-kerjean/filestash/server/common"
+	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_minio"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_security_scanner"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_security_svg"
 )
