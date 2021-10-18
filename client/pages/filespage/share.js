@@ -39,7 +39,7 @@ export class ShareComponent extends React.Component {
                 existings: existings.sort((a, b) => {
                     return a.path.split("/").length > b.path.split("/").length;
                 }),
-                role: existings.length === 0 ? "editor" : null
+                role: existings.length === 0 ? window.CONFIG["share_default_access"] : null
             });
         });
     }
@@ -182,12 +182,12 @@ export class ShareComponent extends React.Component {
         };
         const datify = function(str){
             if(!str) return str;
-            const d = new Date(str); 
+            const d = new Date(str);
 
             // old browser not implementing input[type=date] elements
             // may return invalid date,
             if(isNaN(d.getDate())) return str;
-            
+
             const pad2 = (a) => ("00"+a).slice(-2);
             const pad4 = (a) => ("0000"+a).slice(-4);
             return [pad4(d.getFullYear()), pad2(d.getMonth()+1), pad2(d.getDate())].join("-");
@@ -233,7 +233,7 @@ export class ShareComponent extends React.Component {
 
               <NgIf cond={this.state.role !== null}>
                 <h2>{ t("Restrictions") }</h2>
-                <div className="share--content advanced-settings no-select">
+                <div className="share--content restrictions no-select">
                   <SuperCheckbox value={this.state.users} label={ t("Only for users") } placeholder="name0@email.com,name1@email.com" onChange={this.updateState.bind(this, 'users')} inputType="text"/>
                   <SuperCheckbox value={this.state.password} label={ t("Password") } placeholder={ t("protect access with a password") } onChange={this.updateState.bind(this, 'password')} inputType="password"/>
                 </div>

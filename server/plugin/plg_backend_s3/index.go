@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,18 +39,21 @@ func (s S3Backend) Init(params map[string]string, app *App) (IBackend, error) {
 	if params["region"] == "" {
 		params["region"] = "us-east-2"
 	}
+	creds := []credentials.Provider{}
+	if params["access_key_id"] != "" || params["secret_access_key"] != "" {
+		creds = append(creds, &credentials.StaticProvider{Value: credentials.Value{
+			AccessKeyID:     params["access_key_id"],
+			SecretAccessKey: params["secret_access_key"],
+			SessionToken:    params["session_token"],
+		}})
+	}
+	creds = append(
+		creds,
+		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.Must(session.NewSession()))},
+		&credentials.EnvProvider{},
+	)
 	config := &aws.Config{
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&credentials.StaticProvider{Value: credentials.Value{
-					AccessKeyID:     params["access_key_id"],
-					SecretAccessKey: params["secret_access_key"],
-					SessionToken:    params["session_token"],
-				}},
-				&credentials.EnvProvider{},
-				&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.Must(session.NewSession()))},
-			},
-		),
+		Credentials:                   credentials.NewChainCredentials(creds),
 		CredentialsChainVerboseErrors: aws.Bool(true),
 		S3ForcePathStyle:              aws.Bool(true),
 		Region:                        aws.String(params["region"]),
@@ -294,6 +298,9 @@ func (s S3Backend) Rm(path string) error {
 func (s S3Backend) Mv(from string, to string) error {
 	f := s.path(from)
 	t := s.path(to)
+	if from == to {
+		return nil
+	}
 	client := s3.New(s.createSession(f.bucket))
 
 	if f.path == "" {
@@ -303,7 +310,7 @@ func (s S3Backend) Mv(from string, to string) error {
 		// Move Single file
 		input := &s3.CopyObjectInput{
 			Bucket:     aws.String(t.bucket),
-			CopySource: aws.String(f.bucket + "/" + f.path),
+			CopySource: aws.String(f.bucket + "/" + s.urlEncodedPath(f.path)),
 			Key:        aws.String(t.path),
 		}
 		if s.params["encryption_key"] != "" {
@@ -333,7 +340,7 @@ func (s S3Backend) Mv(from string, to string) error {
 		},
 		func(objs *s3.ListObjectsV2Output, lastPage bool) bool {
 			for _, obj := range objs.Contents {
-				from := f.bucket + "/" + *obj.Key
+				from := f.bucket + "/" + s.urlEncodedPath(*obj.Key)
 				toKey := t.path + strings.TrimPrefix(*obj.Key, f.path)
 				input := &s3.CopyObjectInput{
 					CopySource: aws.String(from),
@@ -473,4 +480,16 @@ func (s S3Backend) path(p string) S3Path {
 		bucket,
 		path,
 	}
+}
+
+func (s S3Backend) urlEncodedPath(path string) string {
+	sp := strings.Split(path, "/")
+	
+	var pathElements []string
+	for _, x := range sp {
+		pathElements = append(pathElements, url.QueryEscape(x))
+	}
+
+	encodedPath := strings.Join(pathElements, "/")
+	return encodedPath
 }
