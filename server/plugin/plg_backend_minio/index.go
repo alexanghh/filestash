@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	. "github.com/mickael-kerjean/filestash/server/common"
+	. "github.com/mickael-kerjean/filestash/server/middleware"
 	"github.com/mickael-kerjean/filestash/server/model"
 	"io"
 	"net"
@@ -32,7 +33,6 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
 
-	"github.com/minio/minio-go/v7"
 	mcredentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
@@ -54,7 +54,7 @@ var (
 	clientSec      string
 	clientScopes   string
 	state          string
-	config         oauth2.Config
+	oauth2Config   oauth2.Config
 )
 
 // DiscoveryDoc - parses the output from openid-configuration
@@ -133,11 +133,11 @@ func (s MinioKeycloakBackend) OAuthURL() string {
 	log.Println("Minio OAuthURL")
 	log.Printf("Minio OAuthURL state %s", s.state)
 	if clientSec != "" {
-		log.Println(fmt.Sprintf("Minio OAuthURL AuthCodeURL, %s", config.AuthCodeURL(s.state)))
-		return config.AuthCodeURL(s.state)
+		log.Println(fmt.Sprintf("Minio OAuthURL AuthCodeURL, %s", oauth2Config.AuthCodeURL(s.state)))
+		return oauth2Config.AuthCodeURL(s.state)
 	} else {
-		log.Println(fmt.Sprintf("Minio OAuthURL implicitFlowURL, %s", implicitFlowURL(s.oauth_config, s.state)))
-		return implicitFlowURL(s.oauth_config, s.state)
+		log.Println(fmt.Sprintf("Minio OAuthURL implicitFlowURL, %s", implicitFlowURL(&oauth2Config, s.state)))
+		return implicitFlowURL(&oauth2Config, s.state)
 	}
 }
 
@@ -148,161 +148,30 @@ func (s MinioKeycloakBackend) OAuthURL() string {
 var MinioCache AppCache
 
 type MinioKeycloakBackend struct {
-	oauth_config *oauth2.Config
-	client       *s3.S3
-	config       *aws.Config
-	params       map[string]string
-	state        string
+	client *s3.S3
+	config *aws.Config
+	params map[string]string
+	state  string
 }
 
 func init() {
+	log.Println("Minio init")
 	Backend.Register("minio", MinioKeycloakBackend{})
 	MinioCache = NewAppCache(2, 1)
-	log.Println("Minio init")
 
-	Hooks.Register.HttpEndpoint(func(r *mux.Router, _ *App) error {
-		r.HandleFunc("/miniotest", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusAccepted)
-		}).Methods("GET")
-
-		return nil
-	})
-
-	Hooks.Register.HttpEndpoint(func(r *mux.Router, app *App) error {
-		r.HandleFunc("/minio",
-			func(res http.ResponseWriter, req *http.Request) {
-				SessionAuthenticate(*app, res, req)
-			}).Methods("POST")
-		return nil
-	})
-
-}
-
-func SessionAuthenticate(app App, w http.ResponseWriter, r *http.Request) {
-	log.Println("Minio callback")
-	log.Printf("session::oauth 'SessionAuthenticate' %+v", app.Body)
-	log.Printf("%s %s", r.Method, r.RequestURI)
-
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	app.Body["timestamp"] = time.Now().String()
-	session := model.MapStringInterfaceToMapStringString(app.Body)
-	session["path"] = EnforceDirectory(session["path"])
-
-	backend, err := model.NewBackend(&app, session)
-	if err != nil {
-		Log.Debug("session::auth 'NewBackend' %+v", err)
-		SendErrorResult(w, err)
-		return
-	}
-	log.Printf("backend %+v", backend)
-
-	ctx := context.Background()
-
-	var getWebTokenExpiry func() (*mcredentials.WebIdentityToken, error)
-	if clientSec == "" {
-		getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
-			return &mcredentials.WebIdentityToken{
-				Token: r.Form.Get("id_token"),
-			}, nil
-		}
-	} else {
-		getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
-			oauth2Token, err := config.Exchange(ctx, r.URL.Query().Get("code"))
-			if err != nil {
-				return nil, err
-			}
-			if !oauth2Token.Valid() {
-				return nil, errors.New("invalid token")
-			}
-
-			return &mcredentials.WebIdentityToken{
-				Token:  oauth2Token.Extra("id_token").(string),
-				Expiry: int(oauth2Token.Expiry.Sub(time.Now().UTC()).Seconds()),
-			}, nil
-		}
-	}
-
-	stsEndpoint := Config.Get("auth.minio.sts_endpoint").Default("http://10.40.0.206:9000").String()
-	log.Printf("id_token %s", r.Form.Get("id_token"))
-	log.Printf("getWebTokenExpiry %s", getWebTokenExpiry)
-
-	sts, err := mcredentials.NewSTSWebIdentity(stsEndpoint, getWebTokenExpiry)
-	if err != nil {
-		log.Println(fmt.Errorf("Could not get STS credentials: %s", err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	log.Printf("sts %s", sts)
-
-	opts := &minio.Options{
-		Creds:        sts,
-		BucketLookup: minio.BucketLookupAuto,
-	}
-	log.Printf("host %v", opts)
-
-	u, err := url.Parse(stsEndpoint)
-	if err != nil {
-		log.Println(fmt.Errorf("Failed to parse STS Endpoint: %s", err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-
-	log.Printf("host %s", u.Host)
-
-	//clnt, err := minio.New(u.Host, opts)
-	//if err != nil {
-	//	log.Println(fmt.Errorf("Error while initializing Minio client, %s", err))
-	//	return NewError(err.Error(), http.StatusBadRequest)
-	//}
-	//buckets, err := clnt.ListBuckets(r.Context())
-	//if err != nil {
-	//	log.Println(fmt.Errorf("Error while listing buckets, %s", err))
-	//	return NewError(err.Error(), http.StatusBadRequest)
-	//}
-	//creds, _ := sts.Get()
-
-	//bucketNames := []string{}
-	//
-	//for _, bucket := range buckets {
-	//	log.Println(fmt.Sprintf("Bucket discovered: %s", bucket.Name))
-	//	bucketNames = append(bucketNames, bucket.Name)
-	//}
-	//response := make(map[string]interface{})
-	//response["credentials"] = creds
-	//response["buckets"] = bucketNames
-	//c, err := json.MarshalIndent(response, "", "\t")
-	//if err != nil {
-	//	return NewError(w, err.Error(), http.StatusInternalServerError)
-	//}
-}
-
-func (s MinioKeycloakBackend) Init(params map[string]string, app *App) (IBackend, error) {
-	log.Println("Minio Init")
-	//if params["encryption_key"] != "" && len(params["encryption_key"]) != 32 {
-	//	return nil, NewError(fmt.Sprintf("Encryption key needs to be 32 characters (current: %d)", len(params["encryption_key"])), 400)
-	//}
-	//
-	//if params["region"] == "" {
-	//	params["region"] = "us-east-2"
-	//}
-
-	// store parameters
-
-	configEndpoint := Config.Get("auth.minio.config_endpoint").Default("http://10.40.0.206:8080/auth/realms/application/.well-known/openid-configuration").String()
-	clientID := Config.Get("auth.minio.client_id").Default("minioclient").String()
-	clientSec := Config.Get("auth.minio.client_secret").Default("").String()
-	clientScopes := Config.Get("auth.minio.client_scope").Default("").String()
-
+	// load parameters
+	configEndpoint = Config.Get("auth.minio.config_endpoint").Default("http://10.40.0.206:8080/auth/realms/application/.well-known/openid-configuration").String()
 	ddoc, err := parseDiscoveryDoc(configEndpoint)
 	if err != nil {
-		return nil, NewError(fmt.Sprintf("Failed to parse OIDC discovery document %s", err), 400)
+		log.Printf("Failed to parse OIDC discovery document %s", err)
+		// return nil, NewError(fmt.Sprintf(), 400)
 	}
-
 	log.Printf("AuthEndpoint %s", ddoc.AuthEndpoint)
+
+	clientID = Config.Get("auth.minio.client_id").Default("minioclient").String()
+	clientSec = Config.Get("auth.minio.client_secret").Default("").String()
+	clientScopes = Config.Get("auth.minio.client_scope").Default("").String()
+	stsEndpoint = Config.Get("auth.minio.sts_endpoint").Default("http://10.40.0.206:9000").String()
 
 	scopes := ddoc.ScopesSupported
 	if clientScopes != "" {
@@ -324,22 +193,144 @@ func (s MinioKeycloakBackend) Init(params map[string]string, app *App) (IBackend
 		return ""
 	}()
 
-	config := &oauth2.Config{
+	oauth2Config = oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSec,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  ddoc.AuthEndpoint,
 			TokenURL: ddoc.TokenEndpoint,
 		},
-		RedirectURL: fmt.Sprintf("http://%s:%d/minio",
-			Config.Get("general.host").Default(localip).String(), Config.Get("general.port").Int()),
+		//RedirectURL: fmt.Sprintf("http://%s:%s/minio/callback",
+		//	Config.Get("general.host").Default(localip).String(),
+		//	Config.Get("general.port").Default("8334").String()),
+		RedirectURL: fmt.Sprintf("https://%s/minio/callback",
+			Config.Get("general.host").Default(localip).String()),
 		Scopes: scopes,
 	}
 
-	state := randomState()
-	log.Printf("Init state %s", state)
+	Hooks.Register.HttpEndpoint(func(r *mux.Router, app *App) error {
+		r.PathPrefix("/minio/callback").Handler(NewMiddlewareChain(
+			SessionAuthenticate,
+			[]Middleware{ApiHeaders},
+			*app,
+		)).Methods("POST")
 
-	config2 := &aws.Config{
+		return nil
+	})
+
+}
+
+func SessionAuthenticate(ctx App, w http.ResponseWriter, r *http.Request) {
+	log.Println("Minio callback")
+	log.Printf("Minio callback 'SessionAuthenticate' %+v", ctx.Body)
+	log.Printf("%s %s", r.Method, r.RequestURI)
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("id_token %s", r.Form.Get("id_token"))
+	log.Printf("form %s", r.Form)
+	log.Println("Minio callback get web token")
+
+	var getWebTokenExpiry func() (*mcredentials.WebIdentityToken, error)
+	if clientSec == "" {
+		getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
+			return &mcredentials.WebIdentityToken{
+				Token: r.Form.Get("id_token"),
+			}, nil
+		}
+	} else {
+		getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
+			oauth2Token, err := oauth2Config.Exchange(context.TODO(), r.URL.Query().Get("code"))
+			if err != nil {
+				return nil, err
+			}
+			if !oauth2Token.Valid() {
+				return nil, errors.New("invalid token")
+			}
+
+			return &mcredentials.WebIdentityToken{
+				Token:  oauth2Token.Extra("id_token").(string),
+				Expiry: int(oauth2Token.Expiry.Sub(time.Now().UTC()).Seconds()),
+			}, nil
+		}
+	}
+
+	log.Printf("getWebTokenExpiry %s", getWebTokenExpiry)
+
+	sts, err := mcredentials.NewSTSWebIdentity(stsEndpoint, getWebTokenExpiry)
+	if err != nil {
+		log.Println(fmt.Errorf("Could not get STS credentials: %s", err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("sts %s", sts)
+	creds, _ := sts.Get()
+	log.Println(fmt.Errorf("credentials AccessKeyID: %s", creds.AccessKeyID))
+	log.Println(fmt.Errorf("credentials AccessKeyID: %s", creds.SecretAccessKey))
+	log.Println(fmt.Errorf("credentials AccessKeyID: %s", creds.SessionToken))
+
+	minio_session := model.MapStringInterfaceToMapStringString(ctx.Body)
+	minio_session["path"] = EnforceDirectory(minio_session["path"])
+
+	minio_session["access_key_id"] = creds.AccessKeyID
+	minio_session["secret_access_key"] = creds.SecretAccessKey
+	minio_session["session_token"] = creds.SessionToken
+	minio_session["endpoint"] = stsEndpoint
+	minio_session["region"] = "us-east-2"
+	minio_session["type"] = "minio"
+
+	backend, err := model.NewBackend(&ctx, minio_session)
+	if err != nil {
+		Log.Debug("minio_session::auth 'NewBackend' %+v", err)
+		SendErrorResult(w, err)
+		return
+	}
+
+	home, err := model.GetHome(backend, minio_session["path"])
+	if err != nil {
+		Log.Debug("minio_session::auth 'GetHome' %+v", err)
+		SendErrorResult(w, ErrAuthenticationFailed)
+		return
+	}
+
+	s, err := json.Marshal(minio_session)
+	if err != nil {
+		Log.Debug("minio_session::auth 'Marshal' %+v", err)
+		SendErrorResult(w, NewError(err.Error(), 500))
+		return
+	}
+	obfuscate, err := EncryptString(SECRET_KEY_DERIVATE_FOR_USER, string(s))
+	if err != nil {
+		Log.Debug("minio_session::auth 'Encryption' %+v", err)
+		SendErrorResult(w, NewError(err.Error(), 500))
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     COOKIE_NAME_AUTH,
+		Value:    obfuscate,
+		MaxAge:   60 * 60 * 24 * 30,
+		Path:     COOKIE_PATH,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	if home != "" {
+		log.Printf("minio_session::auth success home: %s", home)
+		http.Redirect(w, r, "/files/", 301)
+	}
+
+	Log.Debug("minio_session::auth success nil")
+	http.Redirect(w, r, "/files/", 301)
+}
+
+func (s MinioKeycloakBackend) Init(params map[string]string, app *App) (IBackend, error) {
+	log.Println("Minio Init")
+
+	config := &aws.Config{
 		Credentials: credentials.NewChainCredentials(
 			[]credentials.Provider{
 				&credentials.StaticProvider{Value: credentials.Value{
@@ -356,15 +347,25 @@ func (s MinioKeycloakBackend) Init(params map[string]string, app *App) (IBackend
 		Region:                        aws.String(params["region"]),
 	}
 	if params["endpoint"] != "" {
-		config2.Endpoint = aws.String(params["endpoint"])
+		config.Endpoint = aws.String(params["endpoint"])
 	}
 
+	// random state for oauth
+	state = randomState()
+
 	backend := &MinioKeycloakBackend{
-		oauth_config: config,
-		config:       config2,
-		params:       params,
-		client:       s3.New(session.New(config2)),
-		state:        state,
+		config: config,
+		params: params,
+		client: s3.New(session.New(config)),
+		state:  state,
+	}
+
+	files, err := backend.Ls("/")
+	if err != nil {
+		log.Printf("Minio Init test LS err: %v", err)
+	}
+	for i := range files {
+		log.Printf("Minio Init test LS file: %s", files[i].Name())
 	}
 	return backend, nil
 }
@@ -381,7 +382,7 @@ func (s MinioKeycloakBackend) LoginForm() Form {
 				ReadOnly: true,
 				Name:     "oauth2",
 				Type:     "text",
-				Value:    "/api/session/auth/minio",
+				Value:    "/minio",
 			},
 		},
 	}

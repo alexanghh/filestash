@@ -61,8 +61,8 @@ github.com/cretz/bine/tor
 github.com/cretz/bine/torutil
 github.com/cretz/bine/torutil/ed25519
 github.com/cretz/bine/torutil/ed25519/internal/edwards25519
-# github.com/davecgh/go-spew v1.1.1
-github.com/davecgh/go-spew/spew
+# github.com/dustin/go-humanize v1.0.0
+github.com/dustin/go-humanize
 # github.com/emirpasic/gods v1.12.0
 github.com/emirpasic/gods/containers
 github.com/emirpasic/gods/lists
@@ -78,6 +78,8 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
+# github.com/google/uuid v1.1.1
+github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
 # github.com/gorilla/mux v1.7.3
@@ -102,8 +104,12 @@ github.com/hirochachacha/go-smb2/internal/utf16le
 github.com/jbenet/go-context/io
 # github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
+# github.com/json-iterator/go v1.1.10
+github.com/json-iterator/go
 # github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd
 github.com/kevinburke/ssh_config
+# github.com/klauspost/cpuid v1.3.1
+github.com/klauspost/cpuid
 # github.com/kr/fs v0.1.0
 github.com/kr/fs
 # github.com/kr/pty v1.1.8
@@ -113,29 +119,49 @@ github.com/mattn/go-sqlite3
 # github.com/mickael-kerjean/net v0.0.0-20191120063050-2457c043ba06
 github.com/mickael-kerjean/net/webdav
 github.com/mickael-kerjean/net/webdav/internal/xml
+# github.com/minio/md5-simd v1.1.0
+github.com/minio/md5-simd
+# github.com/minio/minio-go/v7 v7.0.14
+github.com/minio/minio-go/v7
+github.com/minio/minio-go/v7/pkg/credentials
+github.com/minio/minio-go/v7/pkg/encrypt
+github.com/minio/minio-go/v7/pkg/lifecycle
+github.com/minio/minio-go/v7/pkg/notification
+github.com/minio/minio-go/v7/pkg/replication
+github.com/minio/minio-go/v7/pkg/s3utils
+github.com/minio/minio-go/v7/pkg/set
+github.com/minio/minio-go/v7/pkg/signer
+github.com/minio/minio-go/v7/pkg/sse
+github.com/minio/minio-go/v7/pkg/tags
+# github.com/minio/sha256-simd v0.1.1
+github.com/minio/sha256-simd
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/hashstructure v1.0.0
 github.com/mitchellh/hashstructure
+# github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+github.com/modern-go/concurrent
+# github.com/modern-go/reflect2 v1.0.1
+github.com/modern-go/reflect2
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 github.com/patrickmn/go-cache
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pkg/sftp v1.11.0
 github.com/pkg/sftp
-# github.com/pmezard/go-difflib v1.0.0
-github.com/pmezard/go-difflib/difflib
 # github.com/prasad83/goftp v0.0.0-20210325080443-f57aaed46a32
 github.com/prasad83/goftp
+# github.com/rs/xid v1.2.1
+github.com/rs/xid
 # github.com/sergi/go-diff v1.0.0
 github.com/sergi/go-diff/diffmatchpatch
+# github.com/sirupsen/logrus v1.8.1
+github.com/sirupsen/logrus
 # github.com/src-d/gcfg v1.4.0
 github.com/src-d/gcfg
 github.com/src-d/gcfg/scanner
 github.com/src-d/gcfg/token
 github.com/src-d/gcfg/types
-# github.com/stretchr/testify v1.7.0
-github.com/stretchr/testify/assert
 # github.com/tidwall/gjson v1.6.5
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.3
@@ -163,10 +189,12 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
+# golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
+golang.org/x/crypto/argon2
 golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
@@ -200,6 +228,7 @@ golang.org/x/net/idna
 golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
+golang.org/x/net/publicsuffix
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
@@ -281,6 +310,8 @@ gopkg.in/alexcesaro/quotedprintable.v3
 gopkg.in/asn1-ber.v1
 # gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 gopkg.in/gomail.v2
+# gopkg.in/ini.v1 v1.57.0
+gopkg.in/ini.v1
 # gopkg.in/ldap.v3 v3.1.0
 gopkg.in/ldap.v3
 # gopkg.in/src-d/go-billy.v4 v4.3.2
@@ -333,5 +364,3 @@ gopkg.in/src-d/go-git.v4/utils/merkletrie/internal/frame
 gopkg.in/src-d/go-git.v4/utils/merkletrie/noder
 # gopkg.in/warnings.v0 v0.1.2
 gopkg.in/warnings.v0
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
-gopkg.in/yaml.v3
