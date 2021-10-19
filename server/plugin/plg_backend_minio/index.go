@@ -160,7 +160,8 @@ func init() {
 	MinioCache = NewAppCache(2, 1)
 
 	// load parameters
-	configEndpoint = Config.Get("auth.minio.config_endpoint").Default("http://10.40.0.206:8080/auth/realms/application/.well-known/openid-configuration").String()
+	configEndpoint = Config.Get("auth.minio.config_endpoint").Default(
+		"http://10.40.0.206:8080/auth/realms/application/.well-known/openid-configuration").String()
 	ddoc, err := parseDiscoveryDoc(configEndpoint)
 	if err != nil {
 		log.Printf("Failed to parse OIDC discovery document %s", err)
@@ -200,18 +201,16 @@ func init() {
 			AuthURL:  ddoc.AuthEndpoint,
 			TokenURL: ddoc.TokenEndpoint,
 		},
-		//RedirectURL: fmt.Sprintf("http://%s:%s/minio/callback",
-		//	Config.Get("general.host").Default(localip).String(),
-		//	Config.Get("general.port").Default("8334").String()),
-		RedirectURL: fmt.Sprintf("https://%s/minio/callback",
-			Config.Get("general.host").Default(localip).String()),
+		RedirectURL: fmt.Sprintf("https://%s:%d/minio/callback",
+			Config.Get("general.host").Default(localip).String(),
+			Config.Get("general.port").Int()),
 		Scopes: scopes,
 	}
 
 	Hooks.Register.HttpEndpoint(func(r *mux.Router, app *App) error {
 		r.PathPrefix("/minio/callback").Handler(NewMiddlewareChain(
 			SessionAuthenticate,
-			[]Middleware{ApiHeaders},
+			[]Middleware{ApiHeaders, SecureHeaders},
 			*app,
 		)).Methods("POST")
 
