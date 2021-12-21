@@ -16,7 +16,8 @@ export class SharePage extends React.Component {
             path: null,
             key: null,
             error: null,
-            loading: false
+            loading: false,
+            isUploader: false,
         };
     }
 
