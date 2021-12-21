@@ -25,7 +25,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -77,9 +76,7 @@ type DiscoveryDoc struct {
 
 func implicitFlowURL(c *oauth2.Config, state string) string {
 
-	log.Printf("implicitFlowURL ClientID %s", c.ClientID)
-	log.Printf("implicitFlowURL AuthEndpoint %s", c.Endpoint.AuthURL)
-	log.Printf("implicitFlowURL RedirectURL %s", c.RedirectURL)
+	Log.Debug("implicitFlowURL")
 
 	var buf bytes.Buffer
 	buf.WriteString(c.Endpoint.AuthURL)
@@ -130,15 +127,13 @@ func parseDiscoveryDoc(ustr string) (DiscoveryDoc, error) {
 }
 
 func (s MinioKeycloakBackend) OAuthURL() string {
-	log.Println("Minio OAuthURL")
-	log.Printf("Minio OAuthURL state %s", s.state)
-	if clientSec != "" {
-		log.Println(fmt.Sprintf("Minio OAuthURL AuthCodeURL, %s", oauth2Config.AuthCodeURL(s.state)))
-		return oauth2Config.AuthCodeURL(s.state)
-	} else {
-		log.Println(fmt.Sprintf("Minio OAuthURL implicitFlowURL, %s", implicitFlowURL(&oauth2Config, s.state)))
-		return implicitFlowURL(&oauth2Config, s.state)
-	}
+	//if clientSec != "" {
+	Log.Debug(fmt.Sprintf("Minio OAuthURL AuthCodeURL"))
+	return oauth2Config.AuthCodeURL(s.state)
+	//} else {
+	//	Log.Debug(fmt.Sprintf("Minio OAuthURL implicitFlowURL"))
+	//	return implicitFlowURL(&oauth2Config, s.state)
+	//}
 }
 
 /**
@@ -155,24 +150,23 @@ type MinioKeycloakBackend struct {
 }
 
 func init() {
-	log.Println("Minio init")
+	Log.Debug("Minio init")
 	Backend.Register("minio", MinioKeycloakBackend{})
 	MinioCache = NewAppCache(2, 1)
 
 	// load parameters
-	configEndpoint = Config.Get("auth.minio.config_endpoint").Default(
-		"http://10.40.0.206:8080/auth/realms/application/.well-known/openid-configuration").String()
+	// "http://<keycloak_host>:<port>/auth/realms/<realm>/.well-known/openid-configuration"
+	configEndpoint = Config.Get("auth.minio.config_endpoint").Default(os.Getenv("MINIO_CONFIG_ENDPOINT")).String()
 	ddoc, err := parseDiscoveryDoc(configEndpoint)
 	if err != nil {
-		log.Printf("Failed to parse OIDC discovery document %s", err)
-		// return nil, NewError(fmt.Sprintf(), 400)
+		Log.Error("Failed to parse OIDC discovery document %s", err)
 	}
-	log.Printf("AuthEndpoint %s", ddoc.AuthEndpoint)
 
-	clientID = Config.Get("auth.minio.client_id").Default("minioclient").String()
-	clientSec = Config.Get("auth.minio.client_secret").Default("").String()
-	clientScopes = Config.Get("auth.minio.client_scope").Default("").String()
-	stsEndpoint = Config.Get("auth.minio.sts_endpoint").Default("http://10.40.0.206:9000").String()
+	clientID = Config.Get("auth.minio.client_id").Default(os.Getenv("MINIO_CLIENT_ID")).String()
+	clientSec = Config.Get("auth.minio.client_secret").Default(os.Getenv("MINIO_CLIENT_SECRET")).String()
+	clientScopes = Config.Get("auth.minio.client_scope").Default(os.Getenv("MINIO_CLIENT_SCOPE")).String()
+	// "http://<minio_host>:<port>"
+	stsEndpoint = Config.Get("auth.minio.sts_endpoint").Default(os.Getenv("MINIO_STS_ENDPOINT")).String()
 
 	scopes := ddoc.ScopesSupported
 	if clientScopes != "" {
@@ -201,18 +195,17 @@ func init() {
 			AuthURL:  ddoc.AuthEndpoint,
 			TokenURL: ddoc.TokenEndpoint,
 		},
-		RedirectURL: fmt.Sprintf("https://%s:%d/minio/callback",
-			Config.Get("general.host").Default(localip).String(),
-			Config.Get("general.port").Int()),
+		RedirectURL: fmt.Sprintf("https://%s/minio/callback",
+			Config.Get("general.host").Default(localip).String()),
 		Scopes: scopes,
 	}
 
 	Hooks.Register.HttpEndpoint(func(r *mux.Router, app *App) error {
 		r.PathPrefix("/minio/callback").Handler(NewMiddlewareChain(
 			SessionAuthenticate,
-			[]Middleware{ApiHeaders, SecureHeaders},
+			[]Middleware{SecureHeaders},
 			*app,
-		)).Methods("POST")
+		)).Methods("POST", "GET")
 
 		return nil
 	})
@@ -220,91 +213,95 @@ func init() {
 }
 
 func SessionAuthenticate(ctx App, w http.ResponseWriter, r *http.Request) {
-	log.Println("Minio callback")
-	log.Printf("Minio callback 'SessionAuthenticate' %+v", ctx.Body)
-	log.Printf("%s %s", r.Method, r.RequestURI)
+	Log.Debug("Minio SessionAuthenticate")
 
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("id_token %s", r.Form.Get("id_token"))
-	log.Printf("form %s", r.Form)
-	log.Println("Minio callback get web token")
+	Log.Debug("Minio callback get web token")
 
 	var getWebTokenExpiry func() (*mcredentials.WebIdentityToken, error)
-	if clientSec == "" {
-		getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
-			return &mcredentials.WebIdentityToken{
-				Token: r.Form.Get("id_token"),
-			}, nil
+	getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
+		oauth2Token, err := oauth2Config.Exchange(context.TODO(), r.URL.Query().Get("code"))
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
-			oauth2Token, err := oauth2Config.Exchange(context.TODO(), r.URL.Query().Get("code"))
-			if err != nil {
-				return nil, err
-			}
-			if !oauth2Token.Valid() {
-				return nil, errors.New("invalid token")
-			}
+		if !oauth2Token.Valid() {
+			return nil, errors.New("invalid token")
+		}
 
-			return &mcredentials.WebIdentityToken{
-				Token:  oauth2Token.Extra("id_token").(string),
-				Expiry: int(oauth2Token.Expiry.Sub(time.Now().UTC()).Seconds()),
-			}, nil
-		}
+		return &mcredentials.WebIdentityToken{
+			Token:  oauth2Token.Extra("id_token").(string),
+			Expiry: int(oauth2Token.Expiry.Sub(time.Now().UTC()).Seconds()),
+		}, nil
 	}
-
-	log.Printf("getWebTokenExpiry %s", getWebTokenExpiry)
+	//if clientSec == "" {
+	//	getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
+	//		return &mcredentials.WebIdentityToken{
+	//			Token: r.Form.Get("id_token"),
+	//		}, nil
+	//	}
+	//} else {
+	//	getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
+	//		oauth2Token, err := oauth2Config.Exchange(context.TODO(), r.URL.Query().Get("code"))
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		if !oauth2Token.Valid() {
+	//			return nil, errors.New("invalid token")
+	//		}
+	//
+	//		return &mcredentials.WebIdentityToken{
+	//			Token:  oauth2Token.Extra("id_token").(string),
+	//			Expiry: int(oauth2Token.Expiry.Sub(time.Now().UTC()).Seconds()),
+	//		}, nil
+	//	}
+	//}
 
 	sts, err := mcredentials.NewSTSWebIdentity(stsEndpoint, getWebTokenExpiry)
 	if err != nil {
-		log.Println(fmt.Errorf("Could not get STS credentials: %s", err))
+		Log.Error("Could not get STS credentials: %s", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("sts %s", sts)
 	creds, _ := sts.Get()
-	log.Println(fmt.Errorf("credentials AccessKeyID: %s", creds.AccessKeyID))
-	log.Println(fmt.Errorf("credentials AccessKeyID: %s", creds.SecretAccessKey))
-	log.Println(fmt.Errorf("credentials AccessKeyID: %s", creds.SessionToken))
 
-	minio_session := model.MapStringInterfaceToMapStringString(ctx.Body)
-	minio_session["path"] = EnforceDirectory(minio_session["path"])
+	minioSession := model.MapStringInterfaceToMapStringString(ctx.Body)
+	minioSession["path"] = EnforceDirectory(minioSession["path"])
 
-	minio_session["access_key_id"] = creds.AccessKeyID
-	minio_session["secret_access_key"] = creds.SecretAccessKey
-	minio_session["session_token"] = creds.SessionToken
-	minio_session["endpoint"] = stsEndpoint
-	minio_session["region"] = "us-east-2"
-	minio_session["type"] = "minio"
+	minioSession["access_key_id"] = creds.AccessKeyID
+	minioSession["secret_access_key"] = creds.SecretAccessKey
+	minioSession["session_token"] = creds.SessionToken
+	minioSession["endpoint"] = stsEndpoint
+	minioSession["region"] = "us-east-2"
+	minioSession["type"] = "minio"
 
-	backend, err := model.NewBackend(&ctx, minio_session)
+	backend, err := model.NewBackend(&ctx, minioSession)
 	if err != nil {
-		Log.Debug("minio_session::auth 'NewBackend' %+v", err)
+		Log.Error("minioSession::auth 'NewBackend' %+v", err)
 		SendErrorResult(w, err)
 		return
 	}
 
-	home, err := model.GetHome(backend, minio_session["path"])
+	home, err := model.GetHome(backend, minioSession["path"])
 	if err != nil {
-		Log.Debug("minio_session::auth 'GetHome' %+v", err)
+		Log.Error("minioSession::auth 'GetHome' %+v", err)
 		SendErrorResult(w, ErrAuthenticationFailed)
 		return
 	}
 
-	s, err := json.Marshal(minio_session)
+	s, err := json.Marshal(minioSession)
 	if err != nil {
-		Log.Debug("minio_session::auth 'Marshal' %+v", err)
+		Log.Error("minioSession::auth 'Marshal' %+v", err)
 		SendErrorResult(w, NewError(err.Error(), 500))
 		return
 	}
 	obfuscate, err := EncryptString(SECRET_KEY_DERIVATE_FOR_USER, string(s))
 	if err != nil {
-		Log.Debug("minio_session::auth 'Encryption' %+v", err)
+		Log.Error("minioSession::auth 'Encryption' %+v", err)
 		SendErrorResult(w, NewError(err.Error(), 500))
 		return
 	}
@@ -318,16 +315,16 @@ func SessionAuthenticate(ctx App, w http.ResponseWriter, r *http.Request) {
 	})
 
 	if home != "" {
-		log.Printf("minio_session::auth success home: %s", home)
+		Log.Debug("minioSession::auth success home: %s", home)
 		http.Redirect(w, r, "/files/", 301)
 	}
 
-	Log.Debug("minio_session::auth success nil")
+	Log.Debug("minioSession::auth success nil")
 	http.Redirect(w, r, "/files/", 301)
 }
 
 func (s MinioKeycloakBackend) Init(params map[string]string, app *App) (IBackend, error) {
-	log.Println("Minio Init")
+	Log.Debug("Minio Init")
 
 	config := &aws.Config{
 		Credentials: credentials.NewChainCredentials(
@@ -359,13 +356,13 @@ func (s MinioKeycloakBackend) Init(params map[string]string, app *App) (IBackend
 		state:  state,
 	}
 
-	files, err := backend.Ls("/")
-	if err != nil {
-		log.Printf("Minio Init test LS err: %v", err)
-	}
-	for i := range files {
-		log.Printf("Minio Init test LS file: %s", files[i].Name())
-	}
+	//files, err := backend.Ls("/")
+	//if err != nil {
+	//	Log.Debug("Minio Init test LS err: %v", err)
+	//}
+	//for i := range files {
+	//	Log.Debug("Minio Init test LS file: %s", files[i].Name())
+	//}
 	return backend, nil
 }
 
@@ -381,7 +378,7 @@ func (s MinioKeycloakBackend) LoginForm() Form {
 				ReadOnly: true,
 				Name:     "oauth2",
 				Type:     "text",
-				Value:    "/minio",
+				Value:    "/api/session/auth/minio",
 			},
 		},
 	}
