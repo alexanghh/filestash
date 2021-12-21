@@ -11,6 +11,20 @@ import (
 
 func init() {
 	Backend.Register("s3sts", S3STSBackend{})
+	stsEndpoint()
+}
+
+var stsEndpoint = func() string {
+	return Config.Get("s3sts.sts.endpoint").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Default = "https://localhost:9000"
+		f.Name = "endpoint"
+		f.Type = "text"
+		f.Placeholder = "URL of STS endpoint"
+		return f
+	}).String()
 }
 
 type S3STSBackend struct {
@@ -42,7 +56,8 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			}, nil
 		}
 
-		sts, err := credentials.NewSTSWebIdentity(params["stsEndpoint"], getWebTokenExpiry)
+		params["endpoint"] = stsEndpoint()
+		sts, err := credentials.NewSTSWebIdentity(params["endpoint"], getWebTokenExpiry)
 		if err != nil {
 			Log.Error("Could not get STS credentials: %s", err)
 			return nil, err
@@ -70,11 +85,6 @@ func (this S3STSBackend) LoginForm() Form {
 				Name:     "oauth2",
 				Type:     "text",
 				Value:    "/api/session/auth/s3sts",
-			},
-			{
-				Name:     "stsEndpoint",
-				Type:     "text",
-				Placeholder: "http://127.0.0.1:9000",
 			},
 		},
 	}

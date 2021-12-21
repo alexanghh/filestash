@@ -25,7 +25,7 @@ func init() {
 	VALID_SESSION_TIMEOUT = 3600 * 12 // 1 working day
 	openIDConfig()
 	openIDClientID()
-	openIDScopes()
+	openIDClientSecret()
 }
 
 var openIDConfig = func() string {
@@ -54,28 +54,28 @@ var openIDClientID = func() string {
 	}).String()
 }
 
-var openIDScopes = func() string {
-	return Config.Get("s3sts.openid.scopes").Schema(func(f *FormElement) *FormElement {
+var openIDClientSecret = func() string {
+	return Config.Get("s3sts.openid.client_secret").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Default = "openid"
-		f.Name = "scopes"
+		f.Default = ""
+		f.Name = "client_secret"
 		f.Type = "text"
-		f.Placeholder = "scopes"
+		f.Placeholder = "client_secret"
 		return f
 	}).String()
 }
 
 func OpenID() *oauth2.Config {
 	return &oauth2.Config{
-		RedirectURL: fmt.Sprintf("https://%s/login", Config.Get("general.host").String()),
-		ClientID:    openIDClientID(),
+		RedirectURL:  fmt.Sprintf("https://%s/login", Config.Get("general.host").String()),
+		ClientID:     openIDClientID(),
+		ClientSecret: openIDClientSecret(),
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  OpenIDAuthenticationEndpoint,
 			TokenURL: OpenIDTokenEndpoint,
 		},
-		Scopes: strings.Split(openIDScopes(), ","),
 	}
 }
 
