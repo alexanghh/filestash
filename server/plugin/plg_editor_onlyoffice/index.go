@@ -64,6 +64,22 @@ func init() {
 		}
 		return f
 	})
+	Config.Get("features.office.filestash_server").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "filestash_server"
+		f.Name = "filestash_server"
+		f.Type = "text"
+		f.Description = "Location of your filestash server (if onlyoffice is deployed separately)"
+		f.Default = ""
+		f.Placeholder = "Eg: http://127.0.0.1:8443"
+		if u := os.Getenv("FILESTASH_URL"); u != "" {
+			f.Default = u
+			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
+		}
+		return f
+	})
 
 	if plugin_enable == false {
 		return
@@ -253,11 +269,11 @@ func IframeContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 
 		return localAddr.IP.String()
 	}()
-	scheme := "http"
-	if req.TLS != nil {
-		scheme = "https"
+
+	filestashServerLocation = Config.Get("features.office.filestash_server").String()
+	if filestashServerLocation == "" {
+		filestashServerLocation = fmt.Sprintf("http://%s:%d", localip, Config.Get("general.port").Int())
 	}
-	filestashServerLocation = fmt.Sprintf("%s://%s:%d", scheme, localip, Config.Get("general.port").Int())
 	contentType = func(p string) string {
 		var (
 			word       string = "text"
