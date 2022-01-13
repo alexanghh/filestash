@@ -1,12 +1,14 @@
 package plg_backend_s3sts
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	. "github.com/mickael-kerjean/filestash/server/common"
+	s3 "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_s3"
 	"io"
 	"os"
-
-	s3 "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_s3"
-	credentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 func init() {
@@ -38,38 +40,73 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			return nil, err
 		}
 		params["code"] = ""
-		params["access_token"] = token
+		params["id_token"] = token
 	}
-	if params["access_token"] != "" {
-		if err := OpenIDVerifyToken(params["access_token"]); err != nil {
+
+	if params["id_token"] != "" {
+		if err := OpenIDVerifyToken(params["id_token"]); err != nil {
 			return nil, err
-		}
-		if err := OAuth2IsAuthenticated(params["access_token"]); err != nil {
-			return nil, err
-		}
-		// STS - exchange token for temp credentials
-		var getWebTokenExpiry func() (*credentials.WebIdentityToken, error)
-		getWebTokenExpiry = func() (*credentials.WebIdentityToken, error) {
-			return &credentials.WebIdentityToken{
-				Token:  params["access_token"],
-				Expiry: 3600, // TODO:
-			}, nil
 		}
 
 		params["endpoint"] = stsEndpoint()
-		sts, err := credentials.NewSTSWebIdentity(params["endpoint"], getWebTokenExpiry)
+		config := &aws.Config{
+			Region:   aws.String("us-east-2"),
+			Endpoint: aws.String(params["endpoint"]),
+		}
+		svc := sts.New(session.New(config))
+		Log.Debug("s3sts - sts session ok")
+
+		input := &sts.AssumeRoleWithWebIdentityInput{
+			DurationSeconds:  aws.Int64(3600),
+			RoleArn:          aws.String("arn:aws:iam::123456789012:role/FederatedWebIdentityRole"),
+			RoleSessionName:  aws.String("filestash"),
+			WebIdentityToken: aws.String(params["id_token"]),
+		}
+
+		result, err := svc.AssumeRoleWithWebIdentity(input)
 		if err != nil {
-			Log.Error("Could not get STS credentials: %s", err)
+			if aerr, ok := err.(awserr.Error); ok {
+				switch aerr.Code() {
+				case sts.ErrCodeMalformedPolicyDocumentException:
+					Log.Error(sts.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+				case sts.ErrCodePackedPolicyTooLargeException:
+					Log.Error(sts.ErrCodePackedPolicyTooLargeException, aerr.Error())
+				case sts.ErrCodeIDPRejectedClaimException:
+					Log.Error(sts.ErrCodeIDPRejectedClaimException, aerr.Error())
+				case sts.ErrCodeIDPCommunicationErrorException:
+					Log.Error(sts.ErrCodeIDPCommunicationErrorException, aerr.Error())
+				case sts.ErrCodeInvalidIdentityTokenException:
+					Log.Error(sts.ErrCodeInvalidIdentityTokenException, aerr.Error())
+				case sts.ErrCodeExpiredTokenException:
+					Log.Error(sts.ErrCodeExpiredTokenException, aerr.Error())
+				case sts.ErrCodeRegionDisabledException:
+					Log.Error(sts.ErrCodeRegionDisabledException, aerr.Error())
+				default:
+					Log.Error(aerr.Error())
+				}
+			} else {
+				// Print the error, cast err to awserr.Error to get the Code and
+				// Message from an error.
+				Log.Error(err.Error())
+			}
 			return nil, err
 		}
-		credentials, _ := sts.Get()
-		params["access_key_id"] = credentials.AccessKeyID
-		params["secret_access_key"] = credentials.SecretAccessKey
-		params["session_token"] = credentials.SessionToken
 
+		credentials := result.Credentials
+		params["id_token"] = ""
+		params["access_key_id"] = *credentials.AccessKeyId
+		params["secret_access_key"] = *credentials.SecretAccessKey
+		params["session_token"] = *credentials.SessionToken
+		Log.Debug("s3sts - success param [%v]", params)
+	}
+
+	if params["access_key_id"] != "" && params["secret_access_key"] != "" && params["session_token"] != "" {
+		Log.Debug("s3sts - sts access_key_id [%s]", params["access_key_id"])
 		return s3.S3Backend{}.Init(params, app)
 	}
+
 	return this, nil
+
 }
 
 func (this S3STSBackend) LoginForm() Form {
