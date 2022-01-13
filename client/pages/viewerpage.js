@@ -88,6 +88,15 @@ export class ViewerPage extends React.Component {
                     if(err && err.code === 'BINARY_FILE'){
                         this.setState({opener: 'download', loading: false});
                     }else{
+                        if(err.code === "Unauthorized"){
+                            location = "/login?next="+location.pathname;
+                        } else if(err.code === "INTERNAL_SERVER_ERROR"){
+                            if(err.message.startsWith("InvalidParameterValue")) {
+                                location = "/login?next="+location.pathname;
+                            } else if(err.message.startsWith("InvalidAccessKeyId")) {
+                                location = "/login?next="+location.pathname;
+                            }
+                        }
                         this.props.error(err);
                     }
                 });

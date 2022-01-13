@@ -89,10 +89,16 @@ class FileSystem{
         }).catch((_err) => {
             if(_err.code === "Unauthorized"){
                 location = "/login?next="+location.pathname;
+            } else if(_err.code === "INTERNAL_SERVER_ERROR"){
+                if(_err.message.startsWith("InvalidParameterValue")) {
+                    location = "/login?next="+location.pathname;
+                } else if(_err.message.startsWith("InvalidAccessKeyId")) {
+                    location = "/login?next="+location.pathname;
+                }
             }
             this.obs.next(_err);
             return Promise.reject(_err);
-        })
+        });
     }
 
     _ls_from_cache(path, _record_access = false){
