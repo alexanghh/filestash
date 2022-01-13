@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"time"
 )
@@ -17,6 +18,12 @@ type IBackend interface {
 	Save(path string, file io.Reader) error
 	Touch(path string) error
 	LoginForm() Form
+}
+
+type IAuth interface {
+	Setup() Form
+	EntryPoint(idpParams map[string]string, req *http.Request, res http.ResponseWriter) error
+	Callback(formData map[string]string, idpParams map[string]string, res http.ResponseWriter) (map[string]string, error)
 }
 
 type File struct {
