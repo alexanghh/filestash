@@ -1,23 +1,33 @@
 .component_page_connection_form{
-    margin-bottom: 7px;
-    border-radius: 3px;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    .box {
+        margin-bottom: 7px;
+        border-radius: 3px;
+        box-shadow: 1px 1px 5px rgba(0,0,0,0.2);
+    }
     div.buttons{
         display: flex;
-        margin: -10px -11px 10px;
-        padding: 0px 0px 6px 0;
+        margin: 0px 0px 15px 0px;
+        padding: 5px;
         overflow-x: auto;
         button{
-            min-width: 80px;
-            border-top-left-radius: 0;
-            border-top-right-radius: 0;
+            min-width: 110px;
             padding: 8px 5px;
             box-shadow: 0px 0px 0px rgba(0,0,0,0.2);
+            &:not(.active):hover {
+                transition: background 0.2s ease;
+                background: rgba(0,0,0,0.03);
+            }
             &.active{
                 transition: box-shadow 0.2s;
                 box-shadow: 0px 2px 20px rgba(0,0,0,0.2);
             }
         }
+    }
+    .formBody form .formbuilder {
+        animation-name: PageConnectionFormBody;
+        opacity: 0;
+        animation-duration: 0.25s;
+        animation-fill-mode: forwards;
     }
     form{
         padding-top: 5px;
@@ -54,6 +64,9 @@
             display: none;
         }
     }
+    .component_loader {
+        margin: 45px 0;
+    }
 }
 
 .component_page_connection_form.form-appear{
@@ -67,16 +80,6 @@
 }
 
 
-.component_rememberme.remember-appear{
-    opacity: 0;
-    transform: translateX(40px);
-}
-.component_rememberme.remember-appear.remember-appear-active{
-    opacity: 1;
-    transform: translateX(0px);
-    transition: all 0.3s ease-out;
-    transition-delay: 0.5s;
-}
 
 .scroll-x{
     overflow-x: auto!important;
@@ -99,9 +102,6 @@
 }
 
 .dark-mode{
-    .component_page_connection_form{
-        background: var(--bg-color);
-    }
     div.buttons button.active{
         background: var(--dark-mode-bg-color);
         color: var(--light);
