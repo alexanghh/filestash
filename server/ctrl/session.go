@@ -7,6 +7,7 @@ import (
 	. "github.com/mickael-kerjean/filestash/server/middleware"
 	"github.com/mickael-kerjean/filestash/server/model"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -198,11 +199,24 @@ func SessionOAuthBackend(ctx App, res http.ResponseWriter, req *http.Request) {
 		SendErrorResult(res, ErrNotSupported)
 		return
 	}
-	if strings.Contains(req.Header.Get("Accept"), "text/html") {
-		http.Redirect(res, req, obj.OAuthURL(), http.StatusSeeOther)
+	redirectUrl, err := url.Parse(obj.OAuthURL())
+	if err != nil {
+		Log.Debug("session::oauth 'Parse URL - \"%s\"'", a["type"])
+		SendErrorResult(res, ErrNotValid)
 		return
 	}
-	SendSuccessResult(res, obj.OAuthURL())
+	stateValue := vars["service"]
+	if req.URL.Query().Get("next") != "" {
+		stateValue += "::" + req.URL.Query().Get("next")
+	}
+	q := redirectUrl.Query()
+	q.Set("state", stateValue)
+	redirectUrl.RawQuery = q.Encode()
+	if strings.Contains(req.Header.Get("Accept"), "text/html") {
+		http.Redirect(res, req, redirectUrl.String(), http.StatusSeeOther)
+		return
+	}
+	SendSuccessResult(res, redirectUrl.String())
 }
 
 func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) {
@@ -215,7 +229,7 @@ func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) 
 		if selectedPluginId == "" {
 			return nil
 		}
-		for key, plugin := range Hooks.All.AuthenticationMiddleware() {
+		for key, plugin := range Hooks.Get.AuthenticationMiddleware() {
 			if key == selectedPluginId {
 				return plugin
 			}
