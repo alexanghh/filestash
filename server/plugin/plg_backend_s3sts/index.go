@@ -37,7 +37,8 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 	if params["code"] != "" {
 		token, err := OAuth2Authenticate(params["code"])
 		if err != nil {
-			return nil, err
+			Log.Error("s3sts::init 'OAuth2Authenticate' %+v", err)
+			return nil, ErrAuthenticationFailed
 		}
 		params["code"] = ""
 		params["id_token"] = token
@@ -45,7 +46,8 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 
 	if params["id_token"] != "" {
 		if err := OpenIDVerifyToken(params["id_token"]); err != nil {
-			return nil, err
+			Log.Error("s3sts::init 'OpenIDVerifyToken'", err.Error())
+			return nil, ErrAuthenticationFailed
 		}
 
 		params["endpoint"] = stsEndpoint()
@@ -68,28 +70,28 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				case sts.ErrCodeMalformedPolicyDocumentException:
-					Log.Error(sts.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeMalformedPolicyDocumentException, aerr.Error())
 				case sts.ErrCodePackedPolicyTooLargeException:
-					Log.Error(sts.ErrCodePackedPolicyTooLargeException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodePackedPolicyTooLargeException, aerr.Error())
 				case sts.ErrCodeIDPRejectedClaimException:
-					Log.Error(sts.ErrCodeIDPRejectedClaimException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeIDPRejectedClaimException, aerr.Error())
 				case sts.ErrCodeIDPCommunicationErrorException:
-					Log.Error(sts.ErrCodeIDPCommunicationErrorException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeIDPCommunicationErrorException, aerr.Error())
 				case sts.ErrCodeInvalidIdentityTokenException:
-					Log.Error(sts.ErrCodeInvalidIdentityTokenException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeInvalidIdentityTokenException, aerr.Error())
 				case sts.ErrCodeExpiredTokenException:
-					Log.Error(sts.ErrCodeExpiredTokenException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeExpiredTokenException, aerr.Error())
 				case sts.ErrCodeRegionDisabledException:
-					Log.Error(sts.ErrCodeRegionDisabledException, aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeRegionDisabledException, aerr.Error())
 				default:
-					Log.Error(aerr.Error())
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", aerr.Error())
 				}
 			} else {
 				// Print the error, cast err to awserr.Error to get the Code and
 				// Message from an error.
-				Log.Error(err.Error())
+				Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", err.Error())
 			}
-			return nil, err
+			return nil, ErrAuthenticationFailed
 		}
 
 		credentials := result.Credentials
@@ -102,11 +104,15 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 
 	if params["access_key_id"] != "" && params["secret_access_key"] != "" && params["session_token"] != "" {
 		Log.Debug("s3sts - sts access_key_id [%s]", params["access_key_id"])
-		return s3.S3Backend{}.Init(params, app)
+		backend, err := s3.S3Backend{}.Init(params, app)
+		if err != nil {
+			Log.Error("s3sts::init 's3 init'", err.Error())
+			return nil, ErrAuthenticationFailed
+		}
+		this.Backend = backend
 	}
 
 	return this, nil
-
 }
 
 func (this S3STSBackend) LoginForm() Form {
@@ -131,30 +137,48 @@ func (this S3STSBackend) OAuthURL() string {
 	return OpenIDGetURL()
 }
 
+func checkS3Error(ops string, err error) error {
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "InvalidAccessKeyId" {
+			Log.Error("s3sts::%s %s", ops, aerr.Error())
+			return ErrNotAuthorized
+		}
+	}
+	return err
+}
+
 func (this S3STSBackend) Ls(path string) ([]os.FileInfo, error) {
-	return []os.FileInfo{}, ErrNotImplemented
+	fileInfo, err := this.Backend.Ls(path)
+	if err != nil {
+		return nil, checkS3Error("ls", err)
+	}
+	return fileInfo, nil
 }
 
 func (this S3STSBackend) Cat(path string) (io.ReadCloser, error) {
-	return nil, ErrNotImplemented
+	body, err := this.Backend.Cat(path)
+	if err != nil {
+		return nil, checkS3Error("cat", err)
+	}
+	return body, nil
 }
 
 func (this S3STSBackend) Mkdir(path string) error {
-	return ErrNotImplemented
+	return checkS3Error("mkdir", this.Backend.Mkdir(path))
 }
 
 func (this S3STSBackend) Rm(path string) error {
-	return ErrNotImplemented
+	return checkS3Error("rm", this.Backend.Rm(path))
 }
 
 func (this S3STSBackend) Mv(from, to string) error {
-	return ErrNotImplemented
+	return checkS3Error("mv", this.Backend.Mv(from, to))
 }
 
 func (this S3STSBackend) Save(path string, content io.Reader) error {
-	return ErrNotImplemented
+	return checkS3Error("save", this.Backend.Save(path, content))
 }
 
 func (this S3STSBackend) Touch(path string) error {
-	return ErrNotImplemented
+	return checkS3Error("touch", this.Backend.Touch(path))
 }
