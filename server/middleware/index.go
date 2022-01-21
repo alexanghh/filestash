@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -78,7 +79,7 @@ func Logger(ctx App, res http.ResponseWriter, req *http.Request) {
 			Proto:      req.Proto,
 			Status:     obj.status,
 			UserAgent:  req.Header.Get("User-Agent"),
-			Ip:         req.RemoteAddr,
+			Ip:         strings.Split(req.RemoteAddr, ":")[0],
 			Referer:    req.Referer(),
 			Duration:   float64(time.Now().Sub(obj.start)) / (1000 * 1000),
 			Backend:    ctx.Session["type"],
@@ -87,7 +88,7 @@ func Logger(ctx App, res http.ResponseWriter, req *http.Request) {
 			telemetry.Record(point)
 		}
 		if Config.Get("log.enable").Bool() {
-			Log.Info("HTTP %3d %3s %6.1fms %s", point.Status, point.Method, point.Duration, point.RequestURI)
+			Log.Info("HTTP %3d %3s %6.1fms %s %s", point.Status, point.Method, point.Duration, point.Ip, point.RequestURI)
 		}
 	}
 }
