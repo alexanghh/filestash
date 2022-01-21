@@ -26,7 +26,7 @@ type FileInfo struct {
 
 var (
 	FileCache  AppCache
-	ZipTimeout int
+	ZipTimeout func() int
 )
 
 func init() {
@@ -35,17 +35,20 @@ func init() {
 	FileCache.OnEvict(func(key string, value interface{}) {
 		os.RemoveAll(filepath.Join(cachePath, key))
 	})
-	ZipTimeout = Config.Get("features.protection.zip_timeout").Schema(func(f *FormElement) *FormElement {
-		if f == nil {
-			f = &FormElement{}
-		}
-		f.Default = 60
-		f.Name = "zip_timeout"
-		f.Type = "number"
-		f.Description = "Timeout when user wants to download archive as a zip"
-		f.Placeholder = "Default: 60seconds"
-		return f
-	}).Int()
+	ZipTimeout = func() int {
+		return Config.Get("features.protection.zip_timeout").Schema(func(f *FormElement) *FormElement {
+			if f == nil {
+				f = &FormElement{}
+			}
+			f.Default = 60
+			f.Name = "zip_timeout"
+			f.Type = "number"
+			f.Description = "Timeout when user wants to download archive as a zip"
+			f.Placeholder = "Default: 60seconds"
+			return f
+		}).Int()
+	}
+	ZipTimeout()
 }
 
 func FileLs(ctx App, res http.ResponseWriter, req *http.Request) {
@@ -541,9 +544,10 @@ func FileDownloader(ctx App, res http.ResponseWriter, req *http.Request) {
 	resHeader.Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.zip\"", filename))
 
 	start := time.Now()
-	var addToZipRecursive func(App, *zip.Writer, string, string) error
-	addToZipRecursive = func(c App, zw *zip.Writer, backendPath string, zipRoot string) (err error) {
-		if time.Now().Sub(start) > time.Duration(ZipTimeout)*time.Second {
+	var addToZipRecursive func(App, *zip.Writer, string, string, *[]string) error
+	addToZipRecursive = func(c App, zw *zip.Writer, backendPath string, zipRoot string, errList *[]string) (err error) {
+		if time.Now().Sub(start) > time.Duration(ZipTimeout())*time.Second {
+			Log.Debug("downloader::timeout zip not completed due to timeout")
 			return ErrTimeout
 		}
 		if strings.HasSuffix(backendPath, "/") == false {
@@ -551,14 +555,20 @@ func FileDownloader(ctx App, res http.ResponseWriter, req *http.Request) {
 			zipPath := strings.TrimPrefix(backendPath, zipRoot)
 			zipFile, err := zw.Create(zipPath)
 			if err != nil {
+				*errList = append(*errList, fmt.Sprintf("downloader::create %s %s\n", zipPath, err.Error()))
+				Log.Debug("downloader::create backendPath['%s'] zipPath['%s'] error['%s']", backendPath, zipPath, err.Error())
 				return err
 			}
 			file, err := ctx.Backend.Cat(backendPath)
 			if err != nil {
+				*errList = append(*errList, fmt.Sprintf("downloader::cat %s %s\n", zipPath, err.Error()))
+				Log.Debug("downloader::cat backendPath['%s'] zipPath['%s'] error['%s']", backendPath, zipPath, err.Error())
 				io.Copy(zipFile, strings.NewReader(""))
 				return err
 			}
 			if _, err = io.Copy(zipFile, file); err != nil {
+				*errList = append(*errList, fmt.Sprintf("downloader::copy %s %s\n", zipPath, err.Error()))
+				Log.Debug("downloader::copy backendPath['%s'] zipPath['%s'] error['%s']", backendPath, zipPath, err.Error())
 				io.Copy(zipFile, strings.NewReader(""))
 				return err
 			}
@@ -568,6 +578,8 @@ func FileDownloader(ctx App, res http.ResponseWriter, req *http.Request) {
 		// Process Folder
 		entries, err := c.Backend.Ls(backendPath)
 		if err != nil {
+			*errList = append(*errList, fmt.Sprintf("downloader::ls %s\n", err.Error()))
+			Log.Debug("downloader::ls path['%s'] error['%s']", backendPath, err.Error())
 			return err
 		}
 		for i := 0; i < len(entries); i++ {
@@ -575,7 +587,9 @@ func FileDownloader(ctx App, res http.ResponseWriter, req *http.Request) {
 			if entries[i].IsDir() {
 				newBackendPath += "/"
 			}
-			if err = addToZipRecursive(ctx, zw, newBackendPath, zipRoot); err != nil {
+			if err = addToZipRecursive(ctx, zw, newBackendPath, zipRoot, errList); err != nil {
+				*errList = append(*errList, fmt.Sprintf("downloader::recursive %s\n", err.Error()))
+				Log.Debug("downloader::recursive path['%s'] error['%s']", newBackendPath, err.Error())
 				return err
 			}
 		}
@@ -584,6 +598,7 @@ func FileDownloader(ctx App, res http.ResponseWriter, req *http.Request) {
 
 	zipWriter := zip.NewWriter(res)
 	defer zipWriter.Close()
+	errList := []string{}
 	for i := 0; i < len(paths); i++ {
 		zipRoot := ""
 		if strings.HasSuffix(paths[i], "/") {
@@ -604,7 +619,14 @@ func FileDownloader(ctx App, res http.ResponseWriter, req *http.Request) {
 				return
 			}
 		}
-		addToZipRecursive(ctx, zipWriter, paths[i], zipRoot)
+		addToZipRecursive(ctx, zipWriter, paths[i], zipRoot, &errList)
+	}
+	if len(errList) > 0 {
+		if errorWriter, err := zipWriter.Create("error.log"); err == nil {
+			for _, e := range errList {
+				io.Copy(errorWriter, strings.NewReader(e))
+			}
+		}
 	}
 }
 
