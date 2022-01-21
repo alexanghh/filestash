@@ -146,6 +146,14 @@ export class ExistingThing extends React.Component {
         }
     }
 
+    onDownloadRequest(filename){
+        this.props.emit(
+            "file.download",
+            pathBuilder(this.props.path, this.props.file.name, this.props.file.type),
+            this.props.file.name
+        );
+    }
+
     onRename(newFilename){
         if(typeof newFilename === "string"){
             this.props.emit(
@@ -264,8 +272,14 @@ export class ExistingThing extends React.Component {
                             is_renaming={this.state.is_renaming}
                             onRenameCancel={this.onRenameRequest.bind(this, false)}/>
                   <DateTime show={this.state.icon !== 'loading'} timestamp={this.props.file.time} />
-                  <ActionButton onClickRename={this.onRenameRequest.bind(this)} onClickDelete={this.onDeleteRequest.bind(this)} onClickShare={this.onShareRequest.bind(this)} is_renaming={this.state.is_renaming}
-                                can_rename={this.props.metadata.can_rename !== false} can_delete={this.props.metadata.can_delete !== false} can_share={this.props.metadata.can_share !== false && window.CONFIG.enable_share === true} />
+                  <ActionButton onClickDownload={this.onDownloadRequest.bind(this)}
+                                onClickRename={this.onRenameRequest.bind(this)}
+                                onClickDelete={this.onDeleteRequest.bind(this)}
+                                onClickShare={this.onShareRequest.bind(this)}
+                                is_renaming={this.state.is_renaming}
+                                can_rename={this.props.metadata.can_rename !== false}
+                                can_delete={this.props.metadata.can_delete !== false}
+                                can_share={this.props.metadata.can_share !== false && window.CONFIG.enable_share === true} />
                   <div className="selectionOverlay"></div>
                 </Card>
               </ToggleableLink>
@@ -343,6 +357,11 @@ class Filename extends React.Component {
 }
 
 const ActionButton = (props) => {
+    const onDownload = (e) => {
+        e.preventDefault();
+        props.onClickDownload();
+    };
+
     const onRename = (e) => {
         e.preventDefault();
         props.onClickRename();
@@ -360,6 +379,7 @@ const ActionButton = (props) => {
 
     return (
         <div className="component_action">
+            <Icon name="download" onClick={onDownload} className="component_updater--icon" />
           <NgIf cond={props.can_rename !== false && props.is_renaming === false} type="inline">
             <Icon name="edit" onClick={onRename} className="component_updater--icon" />
           </NgIf>
