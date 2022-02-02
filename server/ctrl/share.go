@@ -7,7 +7,6 @@ import (
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"github.com/mickael-kerjean/filestash/server/model"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -45,7 +44,8 @@ func ShareUpsert(ctx App, res http.ResponseWriter, req *http.Request) {
 				str := ""
 				index := 0
 				for {
-					cookie, err := req.Cookie(COOKIE_NAME_AUTH + strconv.Itoa(index))
+
+					cookie, err := req.Cookie(CookieName(index))
 					if err != nil {
 						break
 					}
@@ -53,11 +53,6 @@ func ShareUpsert(ctx App, res http.ResponseWriter, req *http.Request) {
 					str += cookie.Value
 				}
 				return str
-				//a, err := req.Cookie(COOKIE_NAME_AUTH)
-				//if err != nil {
-				//	return ""
-				//}
-				//return a.Value
 			}
 			return ctx.Share.Auth
 		}(),

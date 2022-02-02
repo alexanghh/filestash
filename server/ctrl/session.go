@@ -1,6 +1,7 @@
 package ctrl
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	. "github.com/mickael-kerjean/filestash/server/common"
@@ -8,8 +9,8 @@ import (
 	"github.com/mickael-kerjean/filestash/server/model"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -85,16 +86,6 @@ func SessionAuthenticate(ctx App, res http.ResponseWriter, req *http.Request) {
 		SendErrorResult(res, NewError(err.Error(), 500))
 		return
 	}
-	//http.SetCookie(res, &http.Cookie{
-	//	Name:     COOKIE_NAME_AUTH,
-	//	Value:    obfuscate,
-	//	MaxAge:   60 * Config.Get("general.cookie_timeout").Int(),
-	//	Path:     COOKIE_PATH,
-	//	HttpOnly: true,
-	//	SameSite: http.SameSiteStrictMode,
-	//})
-	Log.Debug("session::auth 'obfuscate length' %d", len(obfuscate))
-
 	// split session cookie if greater than 3800 bytes
 	value_limit := 3800
 	index := 0
@@ -105,25 +96,21 @@ func SessionAuthenticate(ctx App, res http.ResponseWriter, req *http.Request) {
 		} else {
 			end = len(obfuscate)
 		}
-
 		http.SetCookie(res, &http.Cookie{
-			Name:     COOKIE_NAME_AUTH + strconv.Itoa(index),
+			Name:     CookieName(index),
 			Value:    obfuscate[index*value_limit : end],
 			MaxAge:   60 * Config.Get("general.cookie_timeout").Int(),
 			Path:     COOKIE_PATH,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		})
-
-		Log.Debug("session::auth 'obfuscate index' %d length %d", index, len(obfuscate[index*value_limit:end]))
-
 		if end == len(obfuscate) {
 			break
 		} else {
+			Log.Debug("session::auth obfuscate index: %d length: %d total: %d", index, len(obfuscate[index*value_limit:end]), len(obfuscate))
 			index++
 		}
 	}
-
 	if home != "" {
 		SendSuccessResult(res, home)
 		return
@@ -147,20 +134,14 @@ func SessionLogout(ctx App, res http.ResponseWriter, req *http.Request) {
 			}
 		})(ctx, res, req)
 	}()
-	//http.SetCookie(res, &http.Cookie{
-	//	Name:   COOKIE_NAME_AUTH,
-	//	Value:  "",
-	//	MaxAge: -1,
-	//	Path:   COOKIE_PATH,
-	//})
 	index := 0
 	for {
-		_, err := req.Cookie(COOKIE_NAME_AUTH + strconv.Itoa(index))
+		_, err := req.Cookie(CookieName(index))
 		if err != nil {
 			break
 		}
 		http.SetCookie(res, &http.Cookie{
-			Name:   COOKIE_NAME_AUTH + strconv.Itoa(index),
+			Name:   CookieName(index),
 			Value:  "",
 			MaxAge: -1,
 			Path:   COOKIE_PATH,
@@ -291,7 +272,7 @@ func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) 
 				MaxAge:   60 * 10,
 				Path:     COOKIE_PATH,
 				HttpOnly: true,
-				SameSite: http.SameSiteStrictMode,
+				SameSite: http.SameSiteLaxMode,
 			})
 		}
 		if err := plugin.EntryPoint(idpParams, req, res); err != nil {
@@ -309,7 +290,12 @@ func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) 
 	templateBind, err := plugin.Callback(formData, idpParams, res)
 	if err != nil {
 		Log.Error("session::authMiddleware 'callback error - %s'", err.Error())
-		http.Redirect(res, req, req.URL.Path+"?action=redirect", http.StatusSeeOther)
+		http.Redirect(
+			res,
+			req,
+			"/?error="+ErrNotAllowed.Error()+"&trace=redirect request failed - "+err.Error(),
+			http.StatusSeeOther,
+		)
 		return
 	}
 
@@ -328,7 +314,20 @@ func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) 
 		}
 		mappingToUse := map[string]string{}
 		for k, v := range globalMapping[refCookie.Value] {
-			mappingToUse[k] = NewStringFromInterface(v)
+			str := NewStringFromInterface(v)
+			if str == "" {
+				continue
+			}
+			tmpl, err := template.New("ctrl::session::auth_middleware").Parse(str)
+			mappingToUse[k] = str
+			if err != nil {
+				continue
+			}
+			var b bytes.Buffer
+			if err = tmpl.Execute(&b, tb); err != nil {
+				continue
+			}
+			mappingToUse[k] = b.String()
 		}
 		mappingToUse["timestamp"] = time.Now().String()
 		return mappingToUse, nil
@@ -342,6 +341,7 @@ func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) 
 		)
 		return
 	}
+
 	if _, err := model.NewBackend(&ctx, session); err != nil {
 		Log.Debug("session::authMiddleware 'backend connection failed %+v - %s'", session, err.Error())
 		http.Redirect(
@@ -379,7 +379,7 @@ func SessionAuthMiddleware(ctx App, res http.ResponseWriter, req *http.Request) 
 		MaxAge:   -1,
 		Path:     COOKIE_PATH,
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(res, req, "/", http.StatusTemporaryRedirect)
 }
