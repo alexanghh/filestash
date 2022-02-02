@@ -1,6 +1,5 @@
-/* eslint-disable max-len */
 import React, { useState, useEffect } from "react";
-import { FormBuilder, Icon, Input, Alert, Textarea, Select, Loader } from "../../components/";
+import { FormBuilder, Icon, Input, Alert, Loader } from "../../components/";
 import { Backend, Config, Middleware } from "../../model/";
 import { FormObjToJSON, notify, format, createFormBackend, objectGet } from "../../helpers/";
 import { t } from "../../locales/";
@@ -24,7 +23,7 @@ export class BackendPage extends React.Component {
         Promise.all([
             Backend.all(),
             Config.all(),
-            Middleware.getAllAuthentication()
+            Middleware.getAllAuthentication(),
         ]).then((data) => {
             const [backend, config, middleware_auth] = data;
             delete config["constants"];
@@ -34,7 +33,7 @@ export class BackendPage extends React.Component {
                 backend_enabled: window.CONFIG["connections"].filter((b) => b).map((conn) => {
                     const f = createFormBackend(backend, conn);
                     if (Object.keys(f).length === 0) {
-                        return null
+                        return null;
                     }
                     return f;
                 }).filter((a) => a !== null),
@@ -47,12 +46,13 @@ export class BackendPage extends React.Component {
                         let { type, params } = objectGet(config, ["middleware", "identity_provider"]) || {};
                         type = objectGet(type, ["value"]);
                         params = objectGet(params, ["value"]);
-                        if(!type) return {};
+                        if (!type) return {};
                         const idpParams = JSON.parse(params);
                         const idpForm = middleware_auth[type] || {};
-                        for(let key in idpParams) {
+                        let key = null;
+                        for (key in idpParams) {
                             if (!idpForm[key]) continue;
-                            idpForm[key]["value"] = idpParams[key]
+                            idpForm[key]["value"] = idpParams[key];
                         }
                         return idpForm;
                     }()),
@@ -64,11 +64,11 @@ export class BackendPage extends React.Component {
                             const t = createFormBackend(
                                 backend,
                                 params[key],
-                            )
+                            );
                             acc[key] = t[params[key]["type"]];
                             return acc;
-                        }, {})
-                        let json = {
+                        }, {});
+                        return {
                             "related_backend": {
                                 "label": "Related Backend",
                                 "type": "text",
@@ -79,13 +79,12 @@ export class BackendPage extends React.Component {
                                 "value": related_backend,
                                 "multi": true,
                                 "datalist": window.CONFIG["connections"].map((r) => r.label),
-                                "required": true
+                                "required": true,
                             },
                             ...backendsForm,
-                        }
-                        return json;
+                        };
                     })(),
-                }
+                },
             });
         });
     }
@@ -118,7 +117,7 @@ export class BackendPage extends React.Component {
     }
 
     onUpdateStorageBackend(e) {
-        this.refresh()
+        this.refresh();
         const json = this._buildConfig();
         this.props.isSaving(true);
         return Config.save(json, true, () => {
@@ -138,7 +137,7 @@ export class BackendPage extends React.Component {
                 return {
                     "type": type || null,
                     "params": JSON.stringify(other),
-                }
+                };
             })(),
             "attribute_mapping": (function() {
                 let { related_backend = null, ...params } = objectGet(middlewareData, ["attribute_mapping"]) || {};
@@ -146,13 +145,13 @@ export class BackendPage extends React.Component {
                     return {
                         "related_backend": related_backend || "N/A",
                         "params": JSON.stringify(params),
-                    }
+                    };
                 }
                 ({ related_backend, ...params } = objectGet(json, ["middleware", "attribute_mapping"]) || {});
                 return {
                     "related_backend": related_backend || "N/A",
                     "params": JSON.stringify(params),
-                }
+                };
             })(),
         };
 
@@ -187,9 +186,9 @@ export class BackendPage extends React.Component {
             auth_enabled: {
                 "identity_provider": auth === null ? {} : this.state.auth_available[auth],
                 "attribute_mapping": objectGet(this.state.auth_enabled, ["attribute_mapping"]) || {},
-            }
+            },
         }, () => {
-            this.onUpdateAuthenticationMiddleware(FormObjToJSON(this.state.auth_enabled))
+            this.onUpdateAuthenticationMiddleware(FormObjToJSON(this.state.auth_enabled));
         });
     }
 
@@ -212,9 +211,10 @@ export class BackendPage extends React.Component {
             };
 
             let $checkbox = (
-                <Input type="checkbox" checked={enable(struct)}
-                       style={{ width: "inherit", marginRight: "6px", top: "6px" }}
-                       onChange={(e) => onChange(update.bind(this, e.target.checked))} />
+                <Input
+                    type="checkbox" checked={enable(struct)}
+                    style={{ width: "inherit", marginRight: "6px", top: "6px" }}
+                    onChange={(e) => onChange(update.bind(this, e.target.checked))} />
             );
             if (struct.label === "label") {
                 $checkbox = null;
@@ -291,9 +291,10 @@ function StorageBackend({ backend_available, backend_enabled, backend_add, backe
                     Object.keys(backend_available)
                         .sort((a, b) => a > b)
                         .map((backend_available_current, index) => (
-                            <div key={index}
-                                 onClick={() => backend_add(backend_available_current)}
-                                 className={"box-item pointer no-select" + (isActiveBackend(backend_available_current) ? " active": "")}>
+                            <div
+                                key={index}
+                                onClick={() => backend_add(backend_available_current)}
+                                className={"box-item pointer no-select" + (isActiveBackend(backend_available_current) ? " active": "")}>
                                 <div>
                                     { backend_available_current }
                                     <span className="no-select">
@@ -313,14 +314,15 @@ function StorageBackend({ backend_available, backend_enabled, backend_add, backe
                                     return (
                                         <div key={index}>
                                             <div className="icons no-select"
-                                                 onClick={() => backend_remove(index)}>
+                                                onClick={() => backend_remove(index)}>
                                                 <Icon name="close" />
                                             </div>
-                                            <FormBuilder onChange={formChange}
-                                                         idx={index}
-                                                         key={index}
-                                                         form={{ "": backend_enabled_current }}
-                                                         render={formRender} />
+                                            <FormBuilder
+                                                onChange={formChange}
+                                                idx={index}
+                                                key={index}
+                                                form={{ "": backend_enabled_current }}
+                                                render={formRender} />
                                         </div>
                                     );
                                 })
@@ -330,7 +332,7 @@ function StorageBackend({ backend_available, backend_enabled, backend_add, backe
                 ) : <Alert className="error">There is no storage selected. Where do you want to connect to?</Alert>
             }
         </div>
-    )
+    );
 }
 
 
@@ -342,7 +344,7 @@ function AuthenticationMiddleware({ authentication_available, authentication_ena
 
     useEffect(() => {
         setFormSpec(authentication_enabled);
-    }, [ authentication_enabled ]);
+    }, [authentication_enabled]);
 
     // we want to update the form in a few scenarios:
     // 1. user remove a storage backend
@@ -355,61 +357,64 @@ function AuthenticationMiddleware({ authentication_available, authentication_ena
     // 1. add something to the list => create a new form in the attribute_mapping section
     // 2. remove something from the list => remove something in the attribute_mapping section
     useEffect(() => {
-        if(!formSpec["identity_provider"]) return;
+        if (!formSpec["identity_provider"]) return;
 
         const existingValues = (formSpec["attribute_mapping"]["related_backend"]["value"] || "")
-              .split(/, ?/)
-              .map((a) => a.trim());
+            .split(/, ?/)
+            .map((a) => a.trim());
         const { identity_provider, attribute_mapping } = formSpec;
         const selected = backend_enabled.map((b) => {
-            const type = Object.keys(b)[0]
+            const type = Object.keys(b)[0];
             return {
                 label: b[type].label.value,
-                type: type,
-            }
-        })
-        let needToSave = false
+                type: Object.keys(b)[0],
+            };
+        });
+        let needToSave = false;
 
         // detect missing form from the existing attribute_mapping
         // this happen whenever a user added something in the related_backend input
-        for(let i=0; i<selected.length; i++) {
-            if(attribute_mapping[selected[i].label]) continue;
-            for(let j=0; j<existingValues.length; j++) {
-                if(selected[i].label === existingValues[j]) {
-                    attribute_mapping[selected[i].label] = backend_available[selected[i].type]
+        for (let i=0; i<selected.length; i++) {
+            if (attribute_mapping[selected[i].label]) continue;
+            for (let j=0; j<existingValues.length; j++) {
+                if (selected[i].label === existingValues[j]) {
+                    attribute_mapping[selected[i].label] = backend_available[selected[i].type];
                     needToSave = true;
                 }
             }
         }
         // detect out of date attribute_mapping that are still showing but shouldn't
         Object.keys(formSpec["attribute_mapping"]).map((key) => {
-            if(key === "related_backend") return;
-            if(existingValues.indexOf(key) !== -1) return;
+            if (key === "related_backend") return;
+            if (existingValues.indexOf(key) !== -1) return;
             needToSave = true;
             delete attribute_mapping[key];
-        })
+        });
         if (needToSave === false) return;
         const d = {
             identity_provider,
             attribute_mapping: attribute_mapping,
         };
-        formChange(FormObjToJSON(d))
-        setFormSpec(d)
-    }, [ formSpec["attribute_mapping"]["related_backend"]["value"], !formSpec["identity_provider"] ])
+        formChange(FormObjToJSON(d));
+        setFormSpec(d);
+    }, [
+        formSpec["attribute_mapping"]["related_backend"]["value"],
+        !formSpec["identity_provider"],
+    ]);
 
     useEffect(() => { // autocompletion of the related_backend field
-        const f = { ...formSpec }
+        const f = { ...formSpec };
         f.attribute_mapping.related_backend.datalist = backend_enabled
             .map((r) => r[Object.keys(r)[0]].label.value);
 
-        const enabledBackendLabel = backend_enabled.map((b) => b[Object.keys(b)[0]].label.value)
+        const enabledBackendLabel = backend_enabled.map((b) => b[Object.keys(b)[0]].label.value);
         f.attribute_mapping.related_backend.value = (f.attribute_mapping.related_backend.value || "")
             .split(/, ?/)
             .filter((value) => enabledBackendLabel.indexOf(value) !== -1)
-            .join(", ")
+            .join(", ");
 
         setFormSpec(f);
-    }, [ backend_enabled ])
+    }, [backend_enabled]);
 
     const isActiveAuth = (auth_key) => {
         return auth_key === objectGet(authentication_enabled, ["identity_provider", "type", "value"]);
@@ -417,7 +422,7 @@ function AuthenticationMiddleware({ authentication_available, authentication_ena
 
     if (Object.keys(authentication_available).length === 0) return null;
     return (
-        <div className="component_authenticationmiddleware" style={{minHeight: "400px"}}>
+        <div className="component_authenticationmiddleware" style={{ minHeight: "400px" }}>
             <h2>Authentication Middleware</h2>
 
             <div className="box-container">
@@ -425,14 +430,17 @@ function AuthenticationMiddleware({ authentication_available, authentication_ena
                     Object.keys(authentication_available)
                         .map((auth_current) => (
                             <div key={auth_current}
-                                 onClick={() => authentication_update(isActiveAuth(auth_current) ? null : auth_current)}
-                                 className={"box-item pointer no-select" + (isActiveAuth(auth_current) ? " active": "")}>
+                                onClick={() => authentication_update(isActiveAuth(auth_current) ? null : auth_current)}
+                                className={"box-item pointer no-select" + (isActiveAuth(auth_current) ? " active": "")}>
                                 <div>
                                     { auth_current }
                                     <span className="no-select">
                                         <span className="icon">
-                                            { isActiveAuth(auth_current) === false ? "+" :
-                                              <Icon name="delete" /> }
+                                            {
+                                                isActiveAuth(auth_current) === false ?
+                                                    "+" :
+                                                    <Icon name="delete" />
+                                            }
                                         </span>
                                     </span>
                                 </div>
@@ -452,5 +460,5 @@ function AuthenticationMiddleware({ authentication_available, authentication_ena
                 )
             }
         </div>
-    )
+    );
 }

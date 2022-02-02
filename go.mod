@@ -3,9 +3,11 @@ module github.com/mickael-kerjean/filestash
 go 1.16
 
 require (
+	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/aws/aws-sdk-go v1.40.41
 	github.com/cretz/bine v0.1.0
 	github.com/crewjam/saml v0.4.6 // indirect
+	github.com/elastic/go-elasticsearch/v7 v7.17.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.1
@@ -14,12 +16,13 @@ require (
 	github.com/kr/pty v1.1.8
 	github.com/mattn/go-sqlite3 v2.0.2+incompatible
 	github.com/mickael-kerjean/net v0.0.0-20191120063050-2457c043ba06
+	github.com/minio/minio-go/v7 v7.0.21
 	github.com/mitchellh/hashstructure v1.0.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/sftp v1.11.0
 	github.com/prasad83/goftp v0.0.0-20210325080443-f57aaed46a32
 	github.com/secsy/goftp v0.0.0-20200609142545-aa2de14babf4 // indirect
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tidwall/gjson v1.13.0
 	github.com/tidwall/sjson v1.0.4
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
