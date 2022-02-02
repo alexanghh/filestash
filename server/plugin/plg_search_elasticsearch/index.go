@@ -43,7 +43,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_url"
-		f.Name = "elasticsearch_url"
+		f.Name = "Url"
 		f.Type = "text"
 		f.Description = "Location of your ElasticSearch server(s)"
 		f.Default = ""
@@ -59,7 +59,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_index"
-		f.Name = "elasticsearch_index"
+		f.Name = "Index"
 		f.Type = "text"
 		f.Description = "Name of the Elasticsearch index"
 		f.Default = ""
@@ -75,7 +75,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_username"
-		f.Name = "elasticsearch_username"
+		f.Name = "Username"
 		f.Type = "text"
 		f.Description = "Username for connecting to Elasticsearch"
 		f.Default = ""
@@ -91,7 +91,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_password"
-		f.Name = "elasticsearch_password"
+		f.Name = "Password"
 		f.Type = "text"
 		f.Description = "Password for connecting to Elasticsearch"
 		f.Default = ""
@@ -107,7 +107,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_field_path"
-		f.Name = "elasticsearch_field_path"
+		f.Name = "Path field"
 		f.Type = "text"
 		f.Description = "Field name for file path"
 		f.Default = ""
@@ -123,7 +123,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_field_content"
-		f.Name = "elasticsearch_field_content"
+		f.Name = "Content field"
 		f.Type = "text"
 		f.Description = "Field name for file content"
 		f.Default = ""
@@ -139,7 +139,7 @@ func init() {
 			f = &FormElement{}
 		}
 		f.Id = "elasticsearch_field_size"
-		f.Name = "elasticsearch_field_size"
+		f.Name = "Size field"
 		f.Type = "text"
 		f.Description = "Field name for file size"
 		f.Default = ""
@@ -148,6 +148,17 @@ func init() {
 			f.Default = u
 			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
 		}
+		return f
+	})
+	Config.Get("features.elasticsearch.elasticsearch_allow_root_level_search").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "elasticsearch_allow_root_level_search"
+		f.Name = "Root_level_search"
+		f.Type = "boolean"
+		f.Description = "Enable searching from root level (could potentially bypass access control restrictions)"
+		f.Default = false
 		return f
 	})
 
@@ -203,8 +214,14 @@ func init() {
 }
 
 func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, error) {
-	Log.Error("ES::Query string: %s, keyword, %s", path, keyword)
-
+	Log.Debug("ES::Query string: %s, keyword, %s", path, keyword)
+	if path == "/" {
+		if Config.Get("features.elasticsearch.elasticsearch_allow_root_level_search").Bool() {
+			path = "*"
+		} else {
+			return nil, NewError("Cannot search from root level.", 404)
+		}
+	}
 	var (
 		r map[string]interface{}
 	)
