@@ -182,7 +182,7 @@ class ExistingThingComponent extends React.Component {
     }
 
     onRename(newFilename) {
-        if(typeof newFilename === "string") {
+        if (typeof newFilename === "string") {
             this.props.emit(
                 "file.rename",
                 pathBuilder(this.props.path, this.props.file.name, this.props.file.type),

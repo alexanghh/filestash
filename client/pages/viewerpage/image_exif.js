@@ -29,7 +29,7 @@ class Exif extends React.Component {
         if (!this.state.date) return def;
         return this.state.date.toLocaleDateString(
             navigator.language,
-            { year: "numeric", month: "short", day: "numeric" },
+            { day: "numeric", year: "numeric", month: "short", day: "numeric" },
         );
     }
     formatTime() {
