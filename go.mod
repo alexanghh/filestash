@@ -16,7 +16,6 @@ require (
 	github.com/kr/pty v1.1.8
 	github.com/mattn/go-sqlite3 v2.0.2+incompatible
 	github.com/mickael-kerjean/net v0.0.0-20191120063050-2457c043ba06
-	github.com/minio/minio-go/v7 v7.0.21
 	github.com/mitchellh/hashstructure v1.0.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/sftp v1.11.0
