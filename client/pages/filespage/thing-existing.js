@@ -174,11 +174,16 @@ class ExistingThingComponent extends React.Component {
     }
 
     onDownloadRequest(filename){
-        this.props.emit(
-            "file.download",
-            pathBuilder(this.props.path, this.props.file.name, this.props.file.type),
-            this.props.file.name
-        );
+        if (this.props.file.type === "directory") {
+            this.props.emit("file.download.multiple", [pathBuilder(this.props.path, this.props.file.name, this.props.file.type)]);
+        }
+        else {
+            this.props.emit(
+                "file.download",
+                pathBuilder(this.props.path, this.props.file.name, this.props.file.type),
+                this.props.file.name
+            );
+        }
     }
 
     onRename(newFilename) {
