@@ -8,7 +8,6 @@ import (
 	elasticsearch7 "github.com/elastic/go-elasticsearch/v7"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -38,12 +37,12 @@ func init() {
 	}).Bool(); plugin_enable == false {
 		return
 	}
-	Config.Get("features.elasticsearch.elasticsearch_url").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.url").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_url"
-		f.Name = "Url"
+		f.Id = "url"
+		f.Name = "url"
 		f.Type = "text"
 		f.Description = "Location of your ElasticSearch server(s)"
 		f.Default = ""
@@ -54,12 +53,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_index").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.index").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_index"
-		f.Name = "Index"
+		f.Id = "index"
+		f.Name = "index"
 		f.Type = "text"
 		f.Description = "Name of the Elasticsearch index"
 		f.Default = ""
@@ -70,12 +69,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_username").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.username").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_username"
-		f.Name = "Username"
+		f.Id = "username"
+		f.Name = "username"
 		f.Type = "text"
 		f.Description = "Username for connecting to Elasticsearch"
 		f.Default = ""
@@ -86,12 +85,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_password").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.password").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_password"
-		f.Name = "Password"
+		f.Id = "password"
+		f.Name = "password"
 		f.Type = "text"
 		f.Description = "Password for connecting to Elasticsearch"
 		f.Default = ""
@@ -102,12 +101,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_field_path").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.field_path").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_field_path"
-		f.Name = "Path field"
+		f.Id = "field_path"
+		f.Name = "field_path"
 		f.Type = "text"
 		f.Description = "Field name for file path"
 		f.Default = ""
@@ -118,12 +117,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_field_content").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.field_content").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_field_content"
-		f.Name = "Content field"
+		f.Id = "field_content"
+		f.Name = "field_content"
 		f.Type = "text"
 		f.Description = "Field name for file content"
 		f.Default = ""
@@ -134,12 +133,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_field_size").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.field_size").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_field_size"
-		f.Name = "Size field"
+		f.Id = "field_size"
+		f.Name = "field_size"
 		f.Type = "text"
 		f.Description = "Field name for file size"
 		f.Default = ""
@@ -150,12 +149,12 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.elasticsearch_allow_root_level_search").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.elasticsearch.enable_root_search").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "elasticsearch_allow_root_level_search"
-		f.Name = "Root_level_search"
+		f.Id = "enable_root_search"
+		f.Name = "enable_root_search"
 		f.Type = "boolean"
 		f.Description = "Enable searching from root level (could potentially bypass access control restrictions)"
 		f.Default = false
@@ -163,13 +162,13 @@ func init() {
 	})
 
 	cfg := elasticsearch7.Config{
-		Addresses: strings.Split(Config.Get("features.elasticsearch.elasticsearch_url").String(), ","),
+		Addresses: strings.Split(Config.Get("features.elasticsearch.url").String(), ","),
 	}
-	if Config.Get("features.elasticsearch.elasticsearch_username").String() != "" {
-		cfg.Username = Config.Get("features.elasticsearch.elasticsearch_username").String()
+	if Config.Get("features.elasticsearch.username").String() != "" {
+		cfg.Username = Config.Get("features.elasticsearch.username").String()
 	}
-	if Config.Get("features.elasticsearch.elasticsearch_password").String() != "" {
-		cfg.Password = Config.Get("features.elasticsearch.elasticsearch_password").String()
+	if Config.Get("features.elasticsearch.password").String() != "" {
+		cfg.Password = Config.Get("features.elasticsearch.password").String()
 	}
 
 	var (
@@ -204,19 +203,19 @@ func init() {
 
 	es := &ElasticSearch{
 		Es7:          es7,
-		Index:        Config.Get("features.elasticsearch.elasticsearch_index").String(),
-		PathField:    Config.Get("features.elasticsearch.elasticsearch_field_path").String(),
-		ContentField: Config.Get("features.elasticsearch.elasticsearch_field_content").String(),
-		SizeField:    Config.Get("features.elasticsearch.elasticsearch_field_size").String(),
+		Index:        Config.Get("features.elasticsearch.index").String(),
+		PathField:    Config.Get("features.elasticsearch.field_path").String(),
+		ContentField: Config.Get("features.elasticsearch.field_content").String(),
+		SizeField:    Config.Get("features.elasticsearch.field_size").String(),
 	}
 
 	Hooks.Register.SearchEngine(es)
 }
 
 func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, error) {
-	Log.Debug("ES::Query string: %s, keyword, %s", path, keyword)
+	Log.Debug("ES::Query path: %s, keyword, %s", path, keyword)
 	if path == "/" {
-		if Config.Get("features.elasticsearch.elasticsearch_allow_root_level_search").Bool() {
+		if Config.Get("features.elasticsearch.enable_root_search").Bool() {
 			path = "*"
 		} else {
 			return nil, NewError("Cannot search from root level.", 404)
@@ -232,10 +231,16 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		"query": map[string]interface{}{
 			"query_string": map[string]interface{}{
 				"fields": [2]string{this.ContentField, this.PathField},
-				"query":  this.PathField + ":" + path + " AND " + keyword,
+				"query":  "(" + this.PathField + ":" + strings.ReplaceAll(path, "/", "\\/") + ") AND (" + keyword + ")",
+			},
+		},
+		"highlight": map[string]interface{}{
+			"fields": map[string]interface{}{
+				"attachment.content": map[string]interface{}{},
 			},
 		},
 	}
+
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
 		Log.Error("ES::Query query_builder: Error encoding query: %s", err)
 		return nil, ErrNotFound
@@ -249,6 +254,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		this.Es7.Search.WithTrackTotalHits(true),
 		this.Es7.Search.WithPretty(),
 	)
+
 	if err != nil {
 		Log.Error("ES::Query search: Error getting response: %s", err)
 		res.Body.Close()
@@ -269,6 +275,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 				e["error"].(map[string]interface{})["type"],
 				e["error"].(map[string]interface{})["reason"],
 			)
+			return nil, NewError(e["error"].(map[string]interface{})["reason"].(string), 404)
 		}
 	}
 
@@ -290,14 +297,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	// Print the ID and document source for each hit.
 	for _, hit := range r["hits"].(map[string]interface{})["hits"].([]interface{}) {
 
-		s := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField]
-		if s == nil {
-			s = "0"
-		}
-		size, err := strconv.ParseInt(s.(string), 10, 64)
-		if err != nil {
-			size = 0
-		}
+		Log.Debug("ES::Query search: * highlights %v", hit.(map[string]interface{})["highlight"])
+
+		size := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField].(float64)
 
 		resPath := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.PathField].(string)
 		pathTokens := strings.Split(resPath, "/")
@@ -317,7 +319,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		files = append(files, File{
 			FName: resFilename,
 			FType: "file", // ENUM("file", "directory")
-			FSize: size,
+			FSize: int64(size),
 			FPath: resPath,
 		})
 	}
