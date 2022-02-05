@@ -3,11 +3,10 @@ module github.com/mickael-kerjean/filestash
 go 1.16
 
 require (
-	github.com/NYTimes/gziphandler v1.1.1 // indirect
+	github.com/NYTimes/gziphandler v1.1.1
 	github.com/aws/aws-sdk-go v1.40.41
 	github.com/cretz/bine v0.1.0
-	github.com/crewjam/saml v0.4.6 // indirect
-	github.com/elastic/go-elasticsearch/v7 v7.17.0
+	github.com/crewjam/saml v0.4.6
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.1
@@ -21,7 +20,7 @@ require (
 	github.com/pkg/sftp v1.11.0
 	github.com/prasad83/goftp v0.0.0-20210325080443-f57aaed46a32
 	github.com/secsy/goftp v0.0.0-20200609142545-aa2de14babf4 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.13.0
 	github.com/tidwall/sjson v1.0.4
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
@@ -32,7 +31,7 @@ require (
 	google.golang.org/api v0.15.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	gopkg.in/ldap.v2 v2.5.1 // indirect
+	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/src-d/go-git.v4 v4.13.1
 )
