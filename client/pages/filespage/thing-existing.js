@@ -429,6 +429,11 @@ class Filename extends React.Component {
 }
 
 const ActionButton = (props) => {
+    const onDownload = (e) => {
+        e.preventDefault();
+        props.onClickDownload();
+    };
+
     const onRename = (e) => {
         e.preventDefault();
         props.onClickRename();
