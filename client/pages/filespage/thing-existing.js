@@ -308,6 +308,7 @@ class ExistingThingComponent extends React.Component {
                             filename={this.props.file.name}
                             filesize={this.props.file.size}
                             filetype={this.props.file.type}
+                            filesnipplet={this.props.file.snipplet}
                             hide_extension={this.props.metadata.hide_extension}
                             onRename={this.onRename.bind(this)}
                             is_renaming={this.state.is_renaming}
@@ -423,6 +424,9 @@ class Filename extends React.Component {
                                 autoFocus />
                         </form>
                     </NgIf>
+                    {/*<NgIf cond={this.props.filesnipplet !== undefined && this.props.filesnipplet !== ""} type="inline">*/}
+                    <span classname="tooltiptext">{this.props.filesnipplet}</span>
+                    {/*</NgIf>*/}
                 </span>
             </span>
         );

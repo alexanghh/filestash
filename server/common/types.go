@@ -39,6 +39,7 @@ type IAuthorisation interface {
 type IFile interface {
 	os.FileInfo
 	Path() string
+	Snipplet() string
 }
 
 type ISearch interface {
@@ -51,6 +52,7 @@ type File struct {
 	FTime     int64  `json:"time"`
 	FSize     int64  `json:"size"`
 	FPath     string `json:"path,omitempty"`
+	FSnipplet string `json:"snipplet,omitempty"`
 	CanRename *bool  `json:"can_rename,omitempty"`
 	CanMove   *bool  `json:"can_move_directory,omitempty"`
 	CanDelete *bool  `json:"can_delete,omitempty"`
@@ -86,6 +88,10 @@ func (f File) Sys() interface{} {
 
 func (f File) Path() string {
 	return f.FPath
+}
+
+func (f File) Snipplet() string {
+	return f.FSnipplet
 }
 
 type Metadata struct {

@@ -297,11 +297,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	// Print the ID and document source for each hit.
 	for _, hit := range r["hits"].(map[string]interface{})["hits"].([]interface{}) {
 
-		Log.Debug("ES::Query search: * highlights %v", hit.(map[string]interface{})["highlight"])
-
+		resPath := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.PathField].(string)
 		size := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField].(float64)
 
-		resPath := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.PathField].(string)
 		pathTokens := strings.Split(resPath, "/")
 		resFilename := pathTokens[len(pathTokens)-1]
 		fileToken := strings.Split(resFilename, ".")
@@ -310,17 +308,24 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			resExt = fileToken[len(fileToken)-1]
 		}
 
-		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s",
+		snipplet := ""
+		for _, highlight := range hit.(map[string]interface{})["highlight"].(map[string]interface{})[this.ContentField].([]interface{}) {
+			snipplet = snipplet + highlight.(string) + "<br/>"
+		}
+
+		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, snipplet=%s",
 			hit.(map[string]interface{})["_id"],
 			resPath,
 			resFilename,
-			resExt)
+			resExt,
+			snipplet)
 
 		files = append(files, File{
-			FName: resFilename,
-			FType: "file", // ENUM("file", "directory")
-			FSize: int64(size),
-			FPath: resPath,
+			FName:     resFilename,
+			FType:     "file", // ENUM("file", "directory")
+			FSize:     int64(size),
+			FPath:     resPath,
+			FSnipplet: snipplet,
 		})
 	}
 	Log.Debug(strings.Repeat("=", 37))
