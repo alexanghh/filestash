@@ -402,7 +402,7 @@ class Filename extends React.Component {
                 <span className="file-details">
                     <NgIf cond={this.props.is_renaming === false} type="inline">
                         {
-                            fileWithoutExtension
+                            <span className="filename">{fileWithoutExtension}</span>
                         }{
                             this.props.hide_extension ? null :
                                 <span className="extension">{fileExtension}</span>
@@ -555,7 +555,7 @@ class Image extends React.Component {
                 <Icon name={this.props.icon} />
                 <NgIf
                     className="info_extension"
-                    cond={!!ext && this.props.icon === "file" && this.props.hide_extension !== true}>
+                    cond={!!ext && this.props.view === "grid" && this.props.icon === "file" && this.props.hide_extension !== true}>
                     <span>{ext}</span>
                 </NgIf>
             </span>
