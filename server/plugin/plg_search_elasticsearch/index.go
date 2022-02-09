@@ -17,6 +17,9 @@ type ElasticSearch struct {
 	PathField    string
 	ContentField string
 	SizeField    string
+	TimeField    string
+	PreTags      string
+	PostTags     string
 }
 
 func init() {
@@ -149,6 +152,46 @@ func init() {
 		}
 		return f
 	})
+	Config.Get("features.elasticsearch.field_time").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "field_time"
+		f.Name = "field_time"
+		f.Type = "text"
+		f.Description = "Field name for file time"
+		f.Default = ""
+		f.Placeholder = "Eg: time_field"
+		if u := os.Getenv("ELASTICSEARCH_FIELD_TIME"); u != "" {
+			f.Default = u
+			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
+		}
+		return f
+	})
+	Config.Get("features.elasticsearch.pre_tags").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "pre_tags"
+		f.Name = "pre_tags"
+		f.Type = "text"
+		f.Description = "pre_tags for highlighting"
+		f.Default = "<em>"
+		f.Placeholder = "Eg: <em>"
+		return f
+	})
+	Config.Get("features.elasticsearch.post_tags").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "post_tags"
+		f.Name = "post_tags"
+		f.Type = "text"
+		f.Description = "post_tags for highlighting"
+		f.Default = "</em>"
+		f.Placeholder = "Eg: </em>"
+		return f
+	})
 	Config.Get("features.elasticsearch.enable_root_search").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
@@ -207,6 +250,9 @@ func init() {
 		PathField:    Config.Get("features.elasticsearch.field_path").String(),
 		ContentField: Config.Get("features.elasticsearch.field_content").String(),
 		SizeField:    Config.Get("features.elasticsearch.field_size").String(),
+		TimeField:    Config.Get("features.elasticsearch.field_time").String(),
+		PreTags:      Config.Get("features.elasticsearch.pre_tags").String(),
+		PostTags:     Config.Get("features.elasticsearch.post_tags").String(),
 	}
 
 	Hooks.Register.SearchEngine(es)
@@ -235,6 +281,8 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			},
 		},
 		"highlight": map[string]interface{}{
+			"pre_tags":  [1]string{this.PreTags},
+			"post_tags": [1]string{this.PostTags},
 			"fields": map[string]interface{}{
 				"attachment.content": map[string]interface{}{},
 			},
@@ -270,10 +318,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			return nil, ErrNotFound
 		} else {
 			// Print the response status and error information.
-			Log.Debug("ES::Query search: [%s] %s: %s",
+			Log.Debug("ES::Query search: [%s] %v",
 				res.Status(),
-				e["error"].(map[string]interface{})["type"],
-				e["error"].(map[string]interface{})["reason"],
+				e["error"],
 			)
 			return nil, NewError(e["error"].(map[string]interface{})["reason"].(string), 404)
 		}
@@ -299,6 +346,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 
 		resPath := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.PathField].(string)
 		size := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField].(float64)
+		time := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.TimeField].(float64)
 
 		pathTokens := strings.Split(resPath, "/")
 		resFilename := pathTokens[len(pathTokens)-1]
@@ -309,21 +357,29 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		}
 
 		snipplet := ""
-		for _, highlight := range hit.(map[string]interface{})["highlight"].(map[string]interface{})[this.ContentField].([]interface{}) {
-			snipplet = snipplet + highlight.(string) + "<br/>"
+		if highlights := hit.(map[string]interface{})["highlight"]; highlights != nil {
+			if contentHighlights := highlights.(map[string]interface{})[this.ContentField]; contentHighlights != nil {
+				snipplet = "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
+				for _, contentHighlight := range contentHighlights.([]interface{}) {
+					snipplet = snipplet + contentHighlight.(string) + "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
+				}
+			}
 		}
 
-		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, snipplet=%s",
+		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, size=%f, time=%f, snipplet=%s",
 			hit.(map[string]interface{})["_id"],
 			resPath,
 			resFilename,
 			resExt,
+			size,
+			time,
 			snipplet)
 
 		files = append(files, File{
 			FName:     resFilename,
 			FType:     "file", // ENUM("file", "directory")
 			FSize:     int64(size),
+			FTime:     int64(time),
 			FPath:     resPath,
 			FSnipplet: snipplet,
 		})
