@@ -175,12 +175,12 @@ class ExistingThingComponent extends React.Component {
 
     onDownloadRequest(filename){
         if (this.props.file.type === "directory") {
-            this.props.emit("file.download.multiple", [pathBuilder(this.props.path, this.props.file.name, this.props.file.type)]);
+            this.props.emit("file.download.multiple", [this.props.file.path]);
         }
         else {
             this.props.emit(
                 "file.download",
-                pathBuilder(this.props.path, this.props.file.name, this.props.file.type),
+                this.props.file.path,
                 this.props.file.name
             );
         }
@@ -424,9 +424,6 @@ class Filename extends React.Component {
                                 autoFocus />
                         </form>
                     </NgIf>
-                    {/*<NgIf cond={this.props.filesnipplet !== undefined && this.props.filesnipplet !== ""} type="inline">*/}
-                    <span classname="tooltiptext">{this.props.filesnipplet}</span>
-                    {/*</NgIf>*/}
                 </span>
             </span>
         );
