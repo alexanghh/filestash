@@ -198,6 +198,11 @@ export class FilesPageComponent extends React.Component {
 
     onSearch(search) {
         if (search == null || search.length === 0) {
+            this.setState({
+                files: [],
+                metadata: null,
+                page_number: PAGE_NUMBER_INIT,
+            })
             this.onRefresh();
             return;
         }
