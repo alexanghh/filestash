@@ -356,32 +356,32 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			resExt = fileToken[len(fileToken)-1]
 		}
 
-		snipplet := ""
+		snippet := ""
 		if highlights := hit.(map[string]interface{})["highlight"]; highlights != nil {
 			if contentHighlights := highlights.(map[string]interface{})[this.ContentField]; contentHighlights != nil {
-				snipplet = "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
+				snippet = "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
 				for _, contentHighlight := range contentHighlights.([]interface{}) {
-					snipplet = snipplet + contentHighlight.(string) + "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
+					snippet = snippet + contentHighlight.(string) + "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
 				}
 			}
 		}
 
-		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, size=%f, time=%f, snipplet=%s",
+		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, size=%f, time=%f, snippet=%s",
 			hit.(map[string]interface{})["_id"],
 			resPath,
 			resFilename,
 			resExt,
 			size,
 			time,
-			snipplet)
+			snippet)
 
 		files = append(files, File{
-			FName:     resFilename,
-			FType:     "file", // ENUM("file", "directory")
-			FSize:     int64(size),
-			FTime:     int64(time),
-			FPath:     resPath,
-			FSnipplet: snipplet,
+			FName:    resFilename,
+			FType:    "file", // ENUM("file", "directory")
+			FSize:    int64(size),
+			FTime:    int64(time),
+			FPath:    resPath,
+			FSnippet: snippet,
 		})
 	}
 	Log.Debug(strings.Repeat("=", 37))

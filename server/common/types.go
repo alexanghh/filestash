@@ -52,7 +52,7 @@ type File struct {
 	FTime     int64  `json:"time"`
 	FSize     int64  `json:"size"`
 	FPath     string `json:"path,omitempty"`
-	FSnipplet string `json:"snipplet,omitempty"`
+	FSnippet  string `json:"snippet,omitempty"`
 	CanRename *bool  `json:"can_rename,omitempty"`
 	CanMove   *bool  `json:"can_move_directory,omitempty"`
 	CanDelete *bool  `json:"can_delete,omitempty"`
@@ -91,7 +91,7 @@ func (f File) Path() string {
 }
 
 func (f File) Snipplet() string {
-	return f.FSnipplet
+	return f.FSnippet
 }
 
 type Metadata struct {

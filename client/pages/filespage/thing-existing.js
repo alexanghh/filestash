@@ -3,6 +3,7 @@ import path from "path";
 import { Link } from "react-router-dom";
 import { DragSource, DropTarget } from "react-dnd";
 import { createSelectable } from "react-selectable";
+import DOMPurify from 'dompurify';
 
 import "./thing.scss";
 import { Card, NgIf, Icon, EventEmitter, img_placeholder } from "../../components/";
@@ -308,7 +309,7 @@ class ExistingThingComponent extends React.Component {
                             filename={this.props.file.name}
                             filesize={this.props.file.size}
                             filetype={this.props.file.type}
-                            filesnipplet={this.props.file.snipplet}
+                            filesnippet={this.props.file.snippet}
                             hide_extension={this.props.metadata.hide_extension}
                             onRename={this.onRename.bind(this)}
                             is_renaming={this.state.is_renaming}
@@ -326,6 +327,10 @@ class ExistingThingComponent extends React.Component {
                             can_rename={this.props.metadata.can_rename !== false}
                             can_delete={this.props.metadata.can_delete !== false}
                             can_share={this.props.metadata.can_share !== false && window.CONFIG.enable_share === true} />
+                        <NgIf cond={this.props.file.snippet !== undefined && this.props.file.snippet !== ""} type="inline">
+                            <div className="box">Fullpath: {this.props.file.path}</div>
+                            <div className="box snippet" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(this.props.file.snippet) }}/>
+                        </NgIf>
                         <div className="selectionOverlay"></div>
                     </Card>
                 </ToggleableLink>
