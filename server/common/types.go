@@ -39,7 +39,7 @@ type IAuthorisation interface {
 type IFile interface {
 	os.FileInfo
 	Path() string
-	Snipplet() string
+	Snippet() string
 }
 
 type ISearch interface {
@@ -90,7 +90,7 @@ func (f File) Path() string {
 	return f.FPath
 }
 
-func (f File) Snipplet() string {
+func (f File) Snippet() string {
 	return f.FSnippet
 }
 
