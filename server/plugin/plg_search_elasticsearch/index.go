@@ -345,8 +345,8 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	for _, hit := range r["hits"].(map[string]interface{})["hits"].([]interface{}) {
 
 		resPath := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.PathField].(string)
-		size := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField].(float64)
-		time := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.TimeField].(float64)
+		size := int64(hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField].(float64))
+		time := int64(hit.(map[string]interface{})["_source"].(map[string]interface{})[this.TimeField].(float64) * 1000) // FTime in msecs
 
 		pathTokens := strings.Split(resPath, "/")
 		resFilename := pathTokens[len(pathTokens)-1]
@@ -366,20 +366,20 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			}
 		}
 
-		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, size=%f, time=%f, snippet=%s",
+		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, size=%d, time=%d, snippet_len=%d",
 			hit.(map[string]interface{})["_id"],
 			resPath,
 			resFilename,
 			resExt,
 			size,
 			time,
-			snippet)
+			len(snippet))
 
 		files = append(files, File{
 			FName:    resFilename,
 			FType:    "file", // ENUM("file", "directory")
-			FSize:    int64(size),
-			FTime:    int64(time),
+			FSize:    size,
+			FTime:    time,
 			FPath:    resPath,
 			FSnippet: snippet,
 		})
