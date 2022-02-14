@@ -218,7 +218,7 @@ func init() {
 		r map[string]interface{}
 	)
 
-	es7, err := elasticsearch7.NewDefaultClient()
+	es7, err := elasticsearch7.NewClient(cfg)
 	if err != nil {
 		Log.Error("ES::init Error creating elasticsearch client: %s", err)
 		return
