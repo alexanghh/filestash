@@ -111,7 +111,7 @@ func init() {
 		f.Id = "field_path"
 		f.Name = "field_path"
 		f.Type = "text"
-		f.Description = "Field name for file path"
+		f.Description = "Field name for file path. Path must be keyword type to restrict search."
 		f.Default = ""
 		f.Placeholder = "Eg: path_field"
 		if u := os.Getenv("ELASTICSEARCH_FIELD_PATH"); u != "" {
@@ -272,12 +272,13 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	)
 
 	// Build the request body.
+	// Path must be keyword type to restrict search. Otherwise, search may be global.
 	var buf bytes.Buffer
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"query_string": map[string]interface{}{
 				"fields": [2]string{this.ContentField, this.PathField},
-				"query":  "(" + this.PathField + ":" + strings.ReplaceAll(path, "/", "\\/") + ") AND (" + keyword + ")",
+				"query":  "(" + this.PathField + ":" + strings.ReplaceAll(path, "/", "\\/") + "*) AND (" + keyword + ")",
 			},
 		},
 		"highlight": map[string]interface{}{
