@@ -39,7 +39,7 @@ func init() {
 			}
 			f.Name = "enable"
 			f.Type = "enable"
-			f.Target = []string{"onlyoffice_server"}
+			f.Target = []string{"onlyoffice_server", "onlyoffice_can_download"}
 			f.Description = "Enable/Disable the office suite to manage word, excel and powerpoint documents. This setting requires a restart to comes into effect"
 			f.Default = false
 			if u := os.Getenv("ONLYOFFICE_URL"); u != "" {
@@ -56,7 +56,7 @@ func init() {
 		f.Name = "onlyoffice_server"
 		f.Type = "text"
 		f.Description = "Location of your OnlyOffice server"
-		f.Default = ""
+		f.Default = "http://127.0.0.1:8080"
 		f.Placeholder = "Eg: http://127.0.0.1:8080"
 		if u := os.Getenv("ONLYOFFICE_URL"); u != "" {
 			f.Default = u
@@ -64,20 +64,15 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.office.filestash_server").Schema(func(f *FormElement) *FormElement {
+	Config.Get("features.office.can_download").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Id = "filestash_server"
-		f.Name = "filestash_server"
-		f.Type = "text"
-		f.Description = "Location of your filestash server (if onlyoffice is deployed separately)"
-		f.Default = ""
-		f.Placeholder = "Eg: http://127.0.0.1:8443"
-		if u := os.Getenv("FILESTASH_URL"); u != "" {
-			f.Default = u
-			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
-		}
+		f.Id = "onlyoffice_can_download"
+		f.Name = "can_download"
+		f.Type = "boolean"
+		f.Description = "Display Download button in onlyoffice"
+		f.Default = true
 		return f
 	})
 
@@ -269,11 +264,7 @@ func IframeContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 
 		return localAddr.IP.String()
 	}()
-
-	filestashServerLocation = Config.Get("features.office.filestash_server").String()
-	if filestashServerLocation == "" {
-		filestashServerLocation = fmt.Sprintf("http://%s:%d", localip, Config.Get("general.port").Int())
-	}
+	filestashServerLocation = fmt.Sprintf("http://%s:%d", localip, Config.Get("general.port").Int())
 	contentType = func(p string) string {
 		var (
 			word       string = "text"
@@ -328,7 +319,10 @@ func IframeContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
                   "title": "%s",
                   "url": "%s/onlyoffice/content?key=%s",
                   "fileType": "%s",
-                  "key": "%s"
+                  "key": "%s",
+                  "permissions": {
+                      "download": %s
+                  }
               },
               "editorConfig": {
                   "callbackUrl": "%s/onlyoffice/event",
@@ -360,6 +354,12 @@ func IframeContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 		filestashServerLocation, key,
 		filetype,
 		key,
+		func() string {
+			if Config.Get("features.office.can_download").Bool() {
+				return "true"
+			}
+			return "false"
+		}(),
 		filestashServerLocation,
 		oodsMode,
 		userId,
