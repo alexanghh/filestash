@@ -95,6 +95,8 @@
         border-width: 0;
         box-sizing: border-box;
         white-space: break-spaces;
+        max-height: 400px;
+        overflow-y: scroll;
     }
 
     .selectionOverlay{ display: none; }
