@@ -20,6 +20,7 @@ type ElasticSearch struct {
 	TimeField    string
 	PreTags      string
 	PostTags     string
+	NumFragment  int
 }
 
 func init() {
@@ -175,9 +176,9 @@ func init() {
 		f.Id = "pre_tags"
 		f.Name = "pre_tags"
 		f.Type = "text"
-		f.Description = "pre_tags for highlighting"
-		f.Default = "<em>"
-		f.Placeholder = "Eg: <em>"
+		f.Description = "pre_tags for highlighting. Include id=\"search_result\" to scroll thru snippet"
+		f.Default = "<em id=\"search_result\">"
+		f.Placeholder = "Eg: <em id=\"search_result\">"
 		return f
 	})
 	Config.Get("features.elasticsearch.post_tags").Schema(func(f *FormElement) *FormElement {
@@ -190,6 +191,18 @@ func init() {
 		f.Description = "post_tags for highlighting"
 		f.Default = "</em>"
 		f.Placeholder = "Eg: </em>"
+		return f
+	})
+	Config.Get("features.elasticsearch.num_fragment").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "num_fragment"
+		f.Name = "num_fragment"
+		f.Type = "number"
+		f.Description = "Max number of snippets in file to display. 0 will return whole file with results highlighted"
+		f.Default = "5"
+		f.Placeholder = "Eg: 5"
 		return f
 	})
 	Config.Get("features.elasticsearch.enable_root_search").Schema(func(f *FormElement) *FormElement {
@@ -253,6 +266,7 @@ func init() {
 		TimeField:    Config.Get("features.elasticsearch.field_time").String(),
 		PreTags:      Config.Get("features.elasticsearch.pre_tags").String(),
 		PostTags:     Config.Get("features.elasticsearch.post_tags").String(),
+		NumFragment:  Config.Get("features.elasticsearch.num_fragment").Int(),
 	}
 
 	Hooks.Register.SearchEngine(es)
@@ -282,8 +296,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			},
 		},
 		"highlight": map[string]interface{}{
-			"pre_tags":  [1]string{this.PreTags},
-			"post_tags": [1]string{this.PostTags},
+			"number_of_fragments": this.NumFragment,
+			"pre_tags":            [1]string{this.PreTags},
+			"post_tags":           [1]string{this.PostTags},
 			"fields": map[string]interface{}{
 				"attachment.content": map[string]interface{}{},
 			},
