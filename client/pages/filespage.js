@@ -128,7 +128,6 @@ export class FilesPageComponent extends React.Component {
         this._cleanupListeners();
         const observer = Files.ls(path, this.state.show_hidden).subscribe((res) => {
             if (res.status !== "ok") {
-                notify.send(res, "error");
                 return;
             }
             this.setState({
