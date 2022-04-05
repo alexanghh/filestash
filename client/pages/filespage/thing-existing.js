@@ -327,13 +327,13 @@ class ExistingThingComponent extends React.Component {
                             can_rename={this.props.metadata.can_rename !== false}
                             can_delete={this.props.metadata.can_delete !== false}
                             can_share={this.props.metadata.can_share !== false && window.CONFIG.enable_share === true} />
-                        <NgIf cond={this.props.file.snippet !== undefined && this.props.file.snippet !== ""} type="inline">
-                            <div className="box">Fullpath: {this.props.file.path}</div>
-                            <div className="box snippet" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(this.props.file.snippet) }}/>
-                        </NgIf>
                         <div className="selectionOverlay"></div>
                     </Card>
                 </ToggleableLink>
+                <SearchSnippet
+                    fullpath={this.props.file.path}
+                    snippet={this.props.file.snippet}
+                    />
             </div>,
         )));
     }
@@ -431,6 +431,64 @@ class Filename extends React.Component {
                     </NgIf>
                 </span>
             </span>
+        );
+    }
+}
+
+class SearchSnippet extends React.Component {
+    constructor(props) {
+        super(props);
+        this.resultsDiv = React.createRef();
+        this.state = {scrollIndex: -1, divRef: this.resultsDiv};
+        this.onScrollPrevResult = this.onScrollPrevResult.bind(this);
+        this.onScrollNextResult = this.onScrollNextResult.bind(this);
+    }
+
+    componentDidMount() {
+        this.onScrollNextResult()
+    }
+
+    onScrollPrevResult() {
+        if (this.props.snippet === undefined || this.props.snippet === "")
+            return
+        const results = this.state.divRef.current.querySelectorAll("#search_result")
+        if(results === undefined || results.length === 0)
+            return
+        const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
+        this.setState({scrollIndex: newScrollIndex})
+        this.state.divRef.current.scrollTop = results[newScrollIndex].offsetTop
+    }
+
+    onScrollNextResult() {
+        if (this.props.snippet === undefined || this.props.snippet === "")
+            return
+        const results = this.state.divRef.current.querySelectorAll("#search_result")
+        if(results === undefined || results.length === 0)
+            return
+        const newScrollIndex = (this.state.scrollIndex + 1) % results.length
+        this.setState({scrollIndex: newScrollIndex})
+        this.state.divRef.current.scrollTop = results[newScrollIndex].offsetTop
+    }
+
+    render() {
+        return (
+            <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
+                <div className="box">Fullpath: {this.props.fullpath}
+                    <div className="component_action">
+                        <Icon
+                            name="arrow_left"
+                            onClick={this.onScrollPrevResult}
+                            className="component_updater--icon"/>
+                        <Icon
+                            name="arrow_right"
+                            onClick={this.onScrollNextResult}
+                            className="component_updater--icon"/>
+                    </div>
+                </div>
+                <div ref={this.resultsDiv}
+                     className="box snippet"
+                     dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.props.snippet)}} />
+            </NgIf>
         );
     }
 }
