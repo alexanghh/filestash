@@ -473,8 +473,8 @@ class SearchSnippet extends React.Component {
     render() {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
-                <div className="box">Fullpath: {this.props.fullpath}
-                    <div className="component_action">
+                <div className="box fullpath">Fullpath: {this.props.fullpath}
+                    <div className="component_action" >
                         <Icon
                             name="arrow_left"
                             onClick={this.onScrollPrevResult}

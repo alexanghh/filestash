@@ -90,6 +90,10 @@
         }
     }
 
+    .fullpath {
+        user-select: text;
+    }
+
     .snippet {
         border: 3px solid transparent;
         border-width: 0;
@@ -97,6 +101,7 @@
         white-space: break-spaces;
         max-height: 400px;
         overflow-y: scroll;
+        user-select: text;
     }
 
     .selectionOverlay{ display: none; }
