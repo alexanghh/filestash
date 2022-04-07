@@ -201,7 +201,7 @@ func init() {
 		f.Name = "num_fragment"
 		f.Type = "number"
 		f.Description = "Max number of snippets in file to display. 0 will return whole file with results highlighted"
-		f.Default = "5"
+		f.Default = 5
 		f.Placeholder = "Eg: 5"
 		return f
 	})
