@@ -88,7 +88,7 @@ class FileSystem {
                 return Promise.resolve(null);
             });
         }).catch((_err) => {
-            if (_err.code === "Unauthorized") {
+            if (_err.code === "Unauthorized" || _err.message === "Invalid account") {
                 location = "/login?next=" + location.pathname;
             }
             this.obs.next(_err);
@@ -173,7 +173,7 @@ class FileSystem {
                     return file;
                 }).then((response) => Promise.resolve(response.result));
             }).catch((_err) => {
-                if (_err.code === "Unauthorized") {
+                if (_err.code === "Unauthorized" || _err.message === "Invalid account") {
                     location = "/login?next=" + location.pathname;
                 }
                 this.obs.next(_err);
