@@ -200,7 +200,7 @@ class SubmenuComponent extends React.Component {
                                     <input
                                         ref={this.$input}
                                         onBlur={this.closeIfEmpty.bind(this, false)}
-                                        style={{ "width": this.state.search_input_visible ? "180px" : "0px" }}
+                                        style={{ "width": this.state.search_input_visible ? "360px" : "0px" }}
                                         value={this.state.search_keyword}
                                         onChange={(e) => this.onSearchKeypress(e.target.value, true)}
                                         type="text"
