@@ -36,6 +36,7 @@ import img_list from "../assets/img/list.svg";
 import img_sort from "../assets/img/sort.svg";
 import img_check from "../assets/img/check.svg";
 import img_info from "../assets/img/info.svg";
+import img_info_dark from "../assets/img/info_dark.svg";
 import img_fullscreen from "../assets/img/fullscreen.svg";
 import img_camera from "../assets/img/camera.svg";
 import img_location from "../assets/img/location.svg";
@@ -125,6 +126,8 @@ export const Icon = (props) => {
         img = img_check;
     } else if (props.name === "info") {
         img = img_info;
+    } else if (props.name === "info_dark") {
+        img = img_info_dark;
     } else if (props.name === "fullscreen") {
         img = img_fullscreen;
     } else if (props.name === "camera") {

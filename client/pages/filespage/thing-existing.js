@@ -439,9 +439,10 @@ class SearchSnippet extends React.Component {
     constructor(props) {
         super(props);
         this.resultsDiv = React.createRef();
-        this.state = {scrollIndex: -1, divRef: this.resultsDiv};
+        this.state = {scrollIndex: -1, divRef: this.resultsDiv, preview_visible: true};
         this.onScrollPrevResult = this.onScrollPrevResult.bind(this);
         this.onScrollNextResult = this.onScrollNextResult.bind(this);
+        this.onTogglePreview = this.onTogglePreview.bind(this);
     }
 
     componentDidMount() {
@@ -470,19 +471,42 @@ class SearchSnippet extends React.Component {
         this.state.divRef.current.scrollTop = results[newScrollIndex].offsetTop
     }
 
+    onTogglePreview() {
+        if (this.state.divRef.current.style.display === "none") {
+            this.state.divRef.current.style.display = "block"
+            this.setState({preview_visible: true})
+        }
+        else {
+            this.state.divRef.current.style.display = "none"
+            this.setState({preview_visible: false})
+        }
+    }
+
     render() {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
                 <div className="box fullpath">Fullpath: {this.props.fullpath}
                     <div className="component_action" >
-                        <Icon
-                            name="arrow_left"
-                            onClick={this.onScrollPrevResult}
-                            className="component_updater--icon"/>
-                        <Icon
-                            name="arrow_right"
-                            onClick={this.onScrollNextResult}
-                            className="component_updater--icon"/>
+                        <NgIf cond={this.state.preview_visible !== true}>
+                            <Icon
+                                name="info_dark"
+                                onClick={this.onTogglePreview}
+                                className="component_updater--icon"/>
+                        </NgIf>
+                        <NgIf cond={this.state.preview_visible === true}>
+                            <Icon
+                                name="arrow_left"
+                                onClick={this.onScrollPrevResult}
+                                className="component_updater--icon"/>
+                            <Icon
+                                name="arrow_right"
+                                onClick={this.onScrollNextResult}
+                                className="component_updater--icon"/>
+                            <Icon ref={this.showRef}
+                                  name="close"
+                                  onClick={this.onTogglePreview}
+                                  className="component_updater--icon"/>
+                        </NgIf>
                     </div>
                 </div>
                 <div ref={this.resultsDiv}
