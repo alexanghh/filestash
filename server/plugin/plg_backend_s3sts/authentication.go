@@ -147,42 +147,35 @@ func OpenIDGetURL() string {
 	return url
 }
 
-func OAuth2Authenticate(code string) (string, error) {
+func OAuth2Authenticate(code string) (*oauth2.Token, error) {
 	Log.Info("oauth2::authenticate")
 	Log.Debug("oauth2 - code[%s]", code)
 	token, err := OpenID().Exchange(context.Background(), code)
 	if err != nil {
 		Log.Warning("oauth2::error - couldn't exchange code for token: %+v", err)
-		return "", ErrNotValid
+		return nil, ErrNotValid
 	}
 	if token.Valid() == false {
 		Log.Warning("oauth2::error - token is not valid")
-		return "", ErrNotValid
+		return nil, ErrNotValid
 	}
 	Log.Debug("oauth2 - id_token[%s]", token.Extra("id_token").(string))
-	return token.Extra("id_token").(string), nil
+	return token, nil
 }
 
-//func OAuth2IsAuthenticated(access_token string) error {
-//	Log.Info("oauth2::session")
-//	req, err := http.NewRequest("GET", OpenIDUserInfoEndpoint, nil)
-//	if err != nil {
-//		Log.Error("oauth2::http::new %+v", err)
-//		return err
-//	}
-//	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", access_token))
-//	resp, err := HTTPClient.Do(req)
-//	if err != nil {
-//		Log.Error("oauth2::http::do %+v", err)
-//		return err
-//	}
-//	defer resp.Body.Close()
-//	if resp.StatusCode != http.StatusOK {
-//		Log.Error("oauth2::http::status %d", resp.StatusCode)
-//		return NewError(HTTPFriendlyStatus(resp.StatusCode), resp.StatusCode)
-//	}
-//	return nil
-//}
+func OAuth2RefreshToken(token *oauth2.Token) (*oauth2.Token, error) {
+	Log.Info("oauth2::refresh")
+	if token.RefreshToken != "" {
+		OpenIDGetURL()
+		updatedToken, err := OpenID().TokenSource(context.TODO(), token).Token()
+		if err != nil {
+			Log.Error("oauth2::OAuth2RefreshToken %+v", err)
+			return nil, ErrAuthenticationFailed
+		}
+		token = updatedToken
+	}
+	return token, nil
+}
 
 func OpenIDCreateNonce() string {
 	nonce, _ := EncryptString(SECRET_KEY_DERIVATE_FOR_NONCE, time.Now().UTC().String())

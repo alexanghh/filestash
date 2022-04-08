@@ -7,8 +7,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	s3 "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_s3"
+	"golang.org/x/oauth2"
 	"io"
 	"os"
+	"strconv"
+	"time"
 )
 
 func init() {
@@ -41,7 +44,31 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			return nil, ErrAuthenticationFailed
 		}
 		params["code"] = ""
-		params["id_token"] = token
+
+		params["id_token"] = token.Extra("id_token").(string)
+		params["refresh_token"] = token.RefreshToken
+		params["expiry"] = strconv.FormatInt(token.Expiry.Unix(), 10)
+	} else {
+		if params["refresh_token"] != "" && params["expiry"] != "" {
+			expiry, err := strconv.ParseInt(params["expiry"], 10, 64)
+			if err != nil {
+				Log.Error("s3sts::init 'refresh token check expiry'", err.Error())
+				return nil, err
+			}
+			if expiry < time.Now().Unix() {
+				refreshToken := new(oauth2.Token)
+				refreshToken.RefreshToken = params["refresh_token"]
+				token, err := OAuth2RefreshToken(refreshToken)
+				if err != nil {
+					Log.Error("s3sts::init 'OAuth2Refresh' %+v", err)
+					return nil, ErrAuthenticationFailed
+				}
+
+				params["id_token"] = token.Extra("id_token").(string)
+				params["refresh_token"] = token.RefreshToken
+				params["expiry"] = strconv.FormatInt(token.Expiry.Unix(), 10)
+			}
+		}
 	}
 
 	if params["id_token"] != "" {
@@ -140,9 +167,10 @@ func (this S3STSBackend) OAuthURL() string {
 func checkS3Error(ops string, err error) error {
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "InvalidAccessKeyId" {
-			Log.Error("s3sts::%s %s", ops, aerr.Error())
+			Log.Error("s3sts::%s awserr %s", ops, aerr.Error())
 			return ErrNotAuthorized
 		}
+		Log.Error("s3sts::%s err %s", ops, err.Error())
 	}
 	return err
 }
