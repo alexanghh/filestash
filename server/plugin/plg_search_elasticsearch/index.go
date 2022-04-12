@@ -12,15 +12,16 @@ import (
 )
 
 type ElasticSearch struct {
-	Es7          *elasticsearch7.Client
-	Index        string
-	PathField    string
-	ContentField string
-	SizeField    string
-	TimeField    string
-	PreTags      string
-	PostTags     string
-	NumFragment  int
+	Es7           *elasticsearch7.Client
+	Index         string
+	PathField     string
+	ContentField  string
+	SizeField     string
+	TimeField     string
+	PreTags       string
+	PostTags      string
+	NumFragment   int
+	MaxResultSize int
 }
 
 func init() {
@@ -205,6 +206,18 @@ func init() {
 		f.Placeholder = "Eg: 5"
 		return f
 	})
+	Config.Get("features.elasticsearch.max_result_size").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "max_result_size"
+		f.Name = "max_result_size"
+		f.Type = "number"
+		f.Description = "Max number of search results. (Max value based on index.max_result_window, defaults to 10000)"
+		f.Default = 1000
+		f.Placeholder = "Eg: 1000"
+		return f
+	})
 	Config.Get("features.elasticsearch.enable_root_search").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
@@ -258,15 +271,16 @@ func init() {
 	Log.Debug(strings.Repeat("~", 37))
 
 	es := &ElasticSearch{
-		Es7:          es7,
-		Index:        Config.Get("features.elasticsearch.index").String(),
-		PathField:    Config.Get("features.elasticsearch.field_path").String(),
-		ContentField: Config.Get("features.elasticsearch.field_content").String(),
-		SizeField:    Config.Get("features.elasticsearch.field_size").String(),
-		TimeField:    Config.Get("features.elasticsearch.field_time").String(),
-		PreTags:      Config.Get("features.elasticsearch.pre_tags").String(),
-		PostTags:     Config.Get("features.elasticsearch.post_tags").String(),
-		NumFragment:  Config.Get("features.elasticsearch.num_fragment").Int(),
+		Es7:           es7,
+		Index:         Config.Get("features.elasticsearch.index").String(),
+		PathField:     Config.Get("features.elasticsearch.field_path").String(),
+		ContentField:  Config.Get("features.elasticsearch.field_content").String(),
+		SizeField:     Config.Get("features.elasticsearch.field_size").String(),
+		TimeField:     Config.Get("features.elasticsearch.field_time").String(),
+		PreTags:       Config.Get("features.elasticsearch.pre_tags").String(),
+		PostTags:      Config.Get("features.elasticsearch.post_tags").String(),
+		NumFragment:   Config.Get("features.elasticsearch.num_fragment").Int(),
+		MaxResultSize: Config.Get("features.elasticsearch.max_result_size").Int(),
 	}
 
 	Hooks.Register.SearchEngine(es)
@@ -289,6 +303,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	// Path must be keyword type to restrict search. Otherwise, search may be global.
 	var buf bytes.Buffer
 	query := map[string]interface{}{
+		"size": this.MaxResultSize,
 		"query": map[string]interface{}{
 			"query_string": map[string]interface{}{
 				"fields": [2]string{this.ContentField, this.PathField},
@@ -366,11 +381,6 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 
 		pathTokens := strings.Split(resPath, "/")
 		resFilename := pathTokens[len(pathTokens)-1]
-		fileToken := strings.Split(resFilename, ".")
-		resExt := ""
-		if len(fileToken) > 1 {
-			resExt = fileToken[len(fileToken)-1]
-		}
 
 		snippet := ""
 		if highlights := hit.(map[string]interface{})["highlight"]; highlights != nil {
@@ -381,15 +391,6 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 				}
 			}
 		}
-
-		Log.Debug("ES::Query search: * ID=%s, path=%s, FName=%s, ext=%s, size=%d, time=%d, snippet_len=%d",
-			hit.(map[string]interface{})["_id"],
-			resPath,
-			resFilename,
-			resExt,
-			size,
-			time,
-			len(snippet))
 
 		files = append(files, File{
 			FName:    resFilename,
