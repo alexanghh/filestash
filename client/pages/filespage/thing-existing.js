@@ -446,14 +446,17 @@ class SearchSnippet extends React.Component {
     }
 
     componentDidMount() {
-        this.onScrollNextResult()
+        if (this.props.snippet === undefined || this.props.snippet === "")
+            return
+        this.onScrollNextResult();
+        this.onTogglePreview();
     }
 
     onScrollPrevResult() {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
         const results = this.state.divRef.current.querySelectorAll("#search_result")
-        if(results === undefined || results.length === 0)
+        if (results === undefined || results.length === 0)
             return
         const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
         this.setState({scrollIndex: newScrollIndex})
@@ -464,7 +467,7 @@ class SearchSnippet extends React.Component {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
         const results = this.state.divRef.current.querySelectorAll("#search_result")
-        if(results === undefined || results.length === 0)
+        if (results === undefined || results.length === 0)
             return
         const newScrollIndex = (this.state.scrollIndex + 1) % results.length
         this.setState({scrollIndex: newScrollIndex})
@@ -472,11 +475,12 @@ class SearchSnippet extends React.Component {
     }
 
     onTogglePreview() {
+        if (this.props.snippet === undefined || this.props.snippet === "")
+            return
         if (this.state.divRef.current.style.display === "none") {
             this.state.divRef.current.style.display = "block"
             this.setState({preview_visible: true})
-        }
-        else {
+        } else {
             this.state.divRef.current.style.display = "none"
             this.setState({preview_visible: false})
         }
