@@ -9,6 +9,10 @@ export const sort = function(files, type) {
         return sortByName(files);
     } else if (type === "date") {
         return sortByDate(files);
+    } else if (type === "size") {
+        return sortBySize(files);
+    } else if (type === "path") {
+        return sortByPath(files);
     } else {
         return sortByType(files);
     }
@@ -74,6 +78,23 @@ export const sort = function(files, type) {
             return fileA.name.toLowerCase() > fileB.name.toLowerCase() ? +1 : -1;
         });
     }
+    function sortByPath(files) {
+        return files.sort((fileA, fileB) => {
+            let tmp = _moveLoadingDownward(fileA, fileB);
+            if (tmp !== 0) return tmp;
+
+            tmp = _moveFolderUpward(fileA, fileB);
+            if (tmp !== 0) return tmp;
+
+            tmp = _moveHiddenFilesDownward(fileA, fileB);
+            if (tmp !== 0) return tmp;
+
+            if (fileA.path.toLowerCase() === fileB.path.toLowerCase()) {
+                return fileA.path > fileB.path ? +1 : -1;
+            }
+            return fileA.path.toLowerCase() > fileB.path.toLowerCase() ? +1 : -1;
+        });
+    }
     function sortByDate(files) {
         return files.sort((fileA, fileB) => {
             const tmp = _moveLoadingDownward(fileA, fileB);
@@ -83,6 +104,17 @@ export const sort = function(files, type) {
                 return fileA.name > fileB.name ? +1 : -1;
             }
             return fileB.time - fileA.time;
+        });
+    }
+    function sortBySize(files) {
+        return files.sort((fileA, fileB) => {
+            const tmp = _moveLoadingDownward(fileA, fileB);
+            if (tmp !== 0) return tmp;
+
+            if (fileB.size === fileA.size) {
+                return fileA.name > fileB.name ? +1 : -1;
+            }
+            return fileB.size - fileA.size;
         });
     }
 };
