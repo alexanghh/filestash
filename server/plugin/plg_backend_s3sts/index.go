@@ -136,6 +136,13 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			Log.Error("s3sts::init 's3 init'", err.Error())
 			return nil, ErrAuthenticationFailed
 		}
+		// check backend is usable
+		_, err = backend.Ls("/")
+		if err != nil {
+			Log.Error("s3sts::init 'ls'", err.Error())
+			return nil, err
+		}
+		Log.Debug("s3sts::init backend ok")
 		this.Backend = backend
 	}
 
