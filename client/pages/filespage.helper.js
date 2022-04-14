@@ -13,6 +13,8 @@ export const sort = function(files, type) {
         return sortBySize(files);
     } else if (type === "path") {
         return sortByPath(files);
+    } else if (type === "hits") {
+        return sortByHits(files);
     } else {
         return sortByType(files);
     }
@@ -115,6 +117,17 @@ export const sort = function(files, type) {
                 return fileA.name > fileB.name ? +1 : -1;
             }
             return fileB.size - fileA.size;
+        });
+    }
+    function sortByHits(files) {
+        return files.sort((fileA, fileB) => {
+            const tmp = _moveLoadingDownward(fileA, fileB);
+            if (tmp !== 0) return tmp;
+
+            if (fileB.hits === fileA.hits) {
+                return fileA.name > fileB.name ? +1 : -1;
+            }
+            return fileB.hits - fileA.hits;
         });
     }
 };

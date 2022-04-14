@@ -93,6 +93,10 @@
     .fullpath {
         user-select: text;
     }
+    .fullpath_highlighted {
+        user-select: text;
+        background: lemonchiffon !important;
+    }
 
     .snippet {
         border: 3px solid transparent;

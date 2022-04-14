@@ -26,6 +26,7 @@ class FileSystemComponent extends React.PureComponent {
         return this.props.connectDropFile(
             <div className="component_filesystem">
                 <Container>
+                    <div className="box">Total: {this.props.totalNumFiles} items | Showing: {this.props.files.length} items </div>
                     <NewThing
                         path={this.props.path} sort={this.props.sort}
                         view={this.props.view} onViewUpdate={(value) => this.props.onView(value)}
@@ -74,6 +75,7 @@ class FileSystemComponent extends React.PureComponent {
 FileSystemComponent.propTypes = {
     path: PropTypes.string.isRequired,
     files: PropTypes.array.isRequired,
+    totalNumFiles: PropTypes.number.isRequired,
     metadata: PropTypes.object.isRequired,
     sort: PropTypes.string.isRequired,
     view: PropTypes.string.isRequired,

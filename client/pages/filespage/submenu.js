@@ -189,6 +189,11 @@ class SubmenuComponent extends React.Component {
                                     icon={this.props.sort === "size" ? "check" : null}>
                                     { t("Sort By Size") }
                                 </DropdownItem>
+                                <DropdownItem
+                                    name="hits"
+                                    icon={this.props.sort === "hits" ? "check" : null}>
+                                    { t("Sort By Hits (Search)") }
+                                </DropdownItem>
                             </DropdownList>
                         </Dropdown>
                         <div

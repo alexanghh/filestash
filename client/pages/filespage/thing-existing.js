@@ -265,6 +265,10 @@ class ExistingThingComponent extends React.Component {
             this.props.file.name;
     }
 
+    onHighlightRequest(object) {
+        this.props.emit("file.highlight", object);
+    }
+
     render(highlight) {
         const { connectDragSource, connectDropFile, connectDropNativeFile } = this.props;
         let className = "";
@@ -332,7 +336,9 @@ class ExistingThingComponent extends React.Component {
                 </ToggleableLink>
                 <SearchSnippet
                     fullpath={this.props.file.path}
+                    hits={this.props.file.hits}
                     snippet={this.props.file.snippet}
+                    onClickHighlight={this.onHighlightRequest.bind(this)}
                     />
             </div>,
         )));
@@ -438,8 +444,9 @@ class Filename extends React.Component {
 class SearchSnippet extends React.Component {
     constructor(props) {
         super(props);
-        this.resultsDiv = React.createRef();
-        this.state = {scrollIndex: -1, divRef: this.resultsDiv, preview_visible: true};
+        this.detailsRef = React.createRef();
+        this.resultsRef = React.createRef();
+        this.state = {scrollIndex: -1, detailsRef: this.detailsRef, resultsRef: this.resultsRef, preview_visible: true};
         this.onScrollPrevResult = this.onScrollPrevResult.bind(this);
         this.onScrollNextResult = this.onScrollNextResult.bind(this);
         this.onTogglePreview = this.onTogglePreview.bind(this);
@@ -455,33 +462,35 @@ class SearchSnippet extends React.Component {
     onScrollPrevResult() {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
-        const results = this.state.divRef.current.querySelectorAll("#search_result")
+        const results = this.state.resultsRef.current.querySelectorAll("#search_result")
         if (results === undefined || results.length === 0)
             return
         const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
         this.setState({scrollIndex: newScrollIndex})
-        this.state.divRef.current.scrollTop = results[newScrollIndex].offsetTop
+        this.state.resultsRef.current.scrollTop = results[newScrollIndex].offsetTop
     }
 
     onScrollNextResult() {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
-        const results = this.state.divRef.current.querySelectorAll("#search_result")
+        const results = this.state.resultsRef.current.querySelectorAll("#search_result")
         if (results === undefined || results.length === 0)
             return
         const newScrollIndex = (this.state.scrollIndex + 1) % results.length
         this.setState({scrollIndex: newScrollIndex})
-        this.state.divRef.current.scrollTop = results[newScrollIndex].offsetTop
+        this.state.resultsRef.current.scrollTop = results[newScrollIndex].offsetTop
     }
 
     onTogglePreview() {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
-        if (this.state.divRef.current.style.display === "none") {
-            this.state.divRef.current.style.display = "block"
+        if (this.state.resultsRef.current.style.display === "none") {
+            this.state.resultsRef.current.style.display = "block"
+            console.log("onTogglePreview: " + this.state.detailsRef)
+            this.props.onClickHighlight(this.state.detailsRef.current);
             this.setState({preview_visible: true})
         } else {
-            this.state.divRef.current.style.display = "none"
+            this.state.resultsRef.current.style.display = "none"
             this.setState({preview_visible: false})
         }
     }
@@ -489,7 +498,7 @@ class SearchSnippet extends React.Component {
     render() {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
-                <div className="box fullpath">Fullpath: {this.props.fullpath}
+                <div ref={this.detailsRef} className="box fullpath">Fullpath: {this.props.fullpath} | Hits: {this.props.hits}
                     <div className="component_action" >
                         <NgIf cond={this.state.preview_visible !== true}>
                             <Icon
@@ -513,7 +522,7 @@ class SearchSnippet extends React.Component {
                         </NgIf>
                     </div>
                 </div>
-                <div ref={this.resultsDiv}
+                <div ref={this.resultsRef}
                      className="box snippet"
                      dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.props.snippet)}} />
             </NgIf>

@@ -46,6 +46,7 @@ export class FilesPageComponent extends React.Component {
             frequents: null,
             page_number: PAGE_NUMBER_INIT,
             loading: true,
+            highlighted: null,
         };
         this.$scroll = createRef();
 
@@ -74,6 +75,7 @@ export class FilesPageComponent extends React.Component {
         this.props.subscribe("file.download.multiple", onMultiDownload.bind(this));
         this.props.subscribe("file.refresh", this.onRefresh.bind(this));
         this.props.subscribe("file.select", this.toggleSelect.bind(this));
+        this.props.subscribe("file.highlight", this.toggleHighlight.bind(this));
         window.addEventListener("keydown", this.toggleHiddenFilesVisibilityonCtrlK);
     }
 
@@ -85,6 +87,7 @@ export class FilesPageComponent extends React.Component {
         this.props.unsubscribe("file.delete.multiple");
         this.props.unsubscribe("file.refresh");
         this.props.unsubscribe("file.select");
+        this.props.unsubscribe("file.highlight");
         window.removeEventListener("keydown", this.toggleHiddenFilesVisibilityonCtrlK);
         this._cleanupListeners();
 
@@ -260,6 +263,15 @@ export class FilesPageComponent extends React.Component {
         }
     }
 
+    toggleHighlight(object) {
+        console.log("toggleHighlight: " + object)
+        if (this.state.highlighted !== null) {
+            this.state.highlighted.className = "box fullpath"
+        }
+        this.setState({ highlighted: object });
+        object.className = "box fullpath_highlighted"
+    }
+
     render() {
         let $moreLoading = (
             <div className="infinite_scroll_loading" key={-1}>
@@ -301,6 +313,7 @@ export class FilesPageComponent extends React.Component {
                                             path={this.state.path} sort={this.state.sort}
                                             view={this.state.view} selected={this.state.selected}
                                             files={this.state.files.slice(0, this.state.page_number * LOAD_PER_SCROLL)}
+                                            totalNumFiles={this.state.files.length}
                                             isSearch={this.state.is_search}
                                             metadata={this.state.metadata || {}}
                                             onSort={this.onSort.bind(this)}
