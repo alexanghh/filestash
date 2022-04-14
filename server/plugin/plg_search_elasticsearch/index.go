@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+const highlight_pre_tag = "<span id=\"search_result\">"
+const highlight_post_tag = "</span>"
+
 type ElasticSearch struct {
 	Es7           *elasticsearch7.Client
 	Index         string
@@ -58,22 +61,6 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.index").Schema(func(f *FormElement) *FormElement {
-		if f == nil {
-			f = &FormElement{}
-		}
-		f.Id = "index"
-		f.Name = "index"
-		f.Type = "text"
-		f.Description = "Name of the Elasticsearch index"
-		f.Default = ""
-		f.Placeholder = "Eg: filestash_index"
-		if u := os.Getenv("ELASTICSEARCH_INDEX"); u != "" {
-			f.Default = u
-			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
-		}
-		return f
-	})
 	Config.Get("features.elasticsearch.username").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
@@ -101,6 +88,22 @@ func init() {
 		f.Default = ""
 		f.Placeholder = "Eg: password"
 		if u := os.Getenv("ELASTICSEARCH_USERNAME"); u != "" {
+			f.Default = u
+			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
+		}
+		return f
+	})
+	Config.Get("features.elasticsearch.index").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "index"
+		f.Name = "index"
+		f.Type = "text"
+		f.Description = "Name of the Elasticsearch index. If empty, top level folder(bucket) is assumed to be the index name."
+		f.Default = ""
+		f.Placeholder = "Eg: filestash_index"
+		if u := os.Getenv("ELASTICSEARCH_INDEX"); u != "" {
 			f.Default = u
 			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
 		}
@@ -177,9 +180,9 @@ func init() {
 		f.Id = "pre_tags"
 		f.Name = "pre_tags"
 		f.Type = "text"
-		f.Description = "pre_tags for highlighting. Include id=\"search_result\" to scroll thru snippet"
-		f.Default = "<em id=\"search_result\">"
-		f.Placeholder = "Eg: <em id=\"search_result\">"
+		f.Description = "pre_tags for highlighting"
+		f.Default = "<em>"
+		f.Placeholder = "Eg: <em>"
 		return f
 	})
 	Config.Get("features.elasticsearch.post_tags").Schema(func(f *FormElement) *FormElement {
@@ -312,8 +315,8 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		},
 		"highlight": map[string]interface{}{
 			"number_of_fragments": this.NumFragment,
-			"pre_tags":            [1]string{this.PreTags},
-			"post_tags":           [1]string{this.PostTags},
+			"pre_tags":            [1]string{highlight_pre_tag + this.PreTags},
+			"post_tags":           [1]string{this.PostTags + highlight_post_tag},
 			"fields": map[string]interface{}{
 				"attachment.content": map[string]interface{}{},
 			},
@@ -325,10 +328,16 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		return nil, ErrNotFound
 	}
 
+	index := this.Index
+	if len(strings.TrimSpace(index)) == 0 {
+		// extract index from path (bucket level index)
+		index = strings.ToLower(strings.Split(path, "/")[1])
+	}
+
 	// Perform the search request.
 	res, err := this.Es7.Search(
 		this.Es7.Search.WithContext(context.Background()),
-		this.Es7.Search.WithIndex(this.Index),
+		this.Es7.Search.WithIndex(index),
 		this.Es7.Search.WithBody(&buf),
 		this.Es7.Search.WithTrackTotalHits(true),
 		this.Es7.Search.WithPretty(),
@@ -399,6 +408,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			FTime:    time,
 			FPath:    resPath,
 			FSnippet: snippet,
+			FHits:    int64(strings.Count(snippet, highlight_pre_tag)),
 		})
 	}
 	Log.Debug(strings.Repeat("=", 37))

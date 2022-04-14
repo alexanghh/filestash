@@ -40,6 +40,7 @@ type IFile interface {
 	os.FileInfo
 	Path() string
 	Snippet() string
+	Hits() int64
 }
 
 type ISearch interface {
@@ -53,6 +54,7 @@ type File struct {
 	FSize     int64  `json:"size"`
 	FPath     string `json:"path,omitempty"`
 	FSnippet  string `json:"snippet,omitempty"`
+	FHits     int64  `json:"hits,omitempty"`
 	CanRename *bool  `json:"can_rename,omitempty"`
 	CanMove   *bool  `json:"can_move_directory,omitempty"`
 	CanDelete *bool  `json:"can_delete,omitempty"`
@@ -92,6 +94,10 @@ func (f File) Path() string {
 
 func (f File) Snippet() string {
 	return f.FSnippet
+}
+
+func (f File) Hits() int64 {
+	return f.FHits
 }
 
 type Metadata struct {

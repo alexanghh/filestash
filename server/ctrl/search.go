@@ -49,6 +49,7 @@ func FileSearch(ctx App, res http.ResponseWriter, req *http.Request) {
 				),
 				FTime:    searchResults[i].ModTime().Unix(),
 				FSnippet: searchResults[i].Snippet(),
+				FHits:    searchResults[i].Hits(),
 			}
 		}
 	}
