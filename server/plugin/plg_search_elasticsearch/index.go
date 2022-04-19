@@ -318,7 +318,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			"pre_tags":            [1]string{highlight_pre_tag + this.PreTags},
 			"post_tags":           [1]string{this.PostTags + highlight_post_tag},
 			"fields": map[string]interface{}{
-				"attachment.content": map[string]interface{}{},
+				this.ContentField: map[string]interface{}{},
 			},
 		},
 	}
