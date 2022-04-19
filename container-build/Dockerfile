@@ -22,7 +22,7 @@ RUN cd filestash && \
     make build_init && \
     make build_backend
 
-RUN timeout 1 /usr/src/app/filestash/filestash | grep -q start
+RUN timeout 1 /usr/src/app/filestash/dist/filestash | grep -q start
 
 EXPOSE 8334
-CMD ["/usr/src/app/filestash/filestash"]
+CMD ["/usr/src/app/filestash/dist/filestash"]
