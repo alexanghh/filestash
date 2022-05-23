@@ -264,7 +264,17 @@ func IframeContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 
 		return localAddr.IP.String()
 	}()
-	filestashServerLocation = fmt.Sprintf("http://%s:%d", localip, Config.Get("general.port").Int())
+	filestashServerLocation = fmt.Sprintf(
+		"%s://%s:%d",
+		func() string { // proto
+			if req.TLS == nil {
+				return "http"
+			}
+			return "https"
+		}(),
+		localip,
+		Config.Get("general.port").Int(),
+	)
 	contentType = func(p string) string {
 		var (
 			word       string = "text"

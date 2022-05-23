@@ -73,7 +73,6 @@ func NewConfiguration() Configuration {
 					FormElement{Name: "logout", Type: "text", Default: "", Description: "Redirection URL whenever user click on the logout button"},
 					FormElement{Name: "display_hidden", Type: "boolean", Default: false, Description: "Should files starting with a dot be visible by default?"},
 					FormElement{Name: "refresh_after_upload", Type: "boolean", Default: false, Description: "Refresh directory listing after upload"},
-					FormElement{Name: "auto_connect", Type: "boolean", Default: false, Description: "User don't have to click on the login button if an admin is prefilling a unique backend"},
 					FormElement{Name: "upload_button", Type: "boolean", Default: false, Description: "Display the upload button on any device"},
 					FormElement{Name: "upload_pool_size", Type: "number", Default: 15, Description: "Maximum number of files upload in parallel (Default: 15)"},
 					FormElement{Name: "filepage_default_view", Type: "select", Default: "grid", Opts: []string{"list", "grid"}, Description: "Default layout for files and folder on the file page"},
@@ -92,6 +91,12 @@ func NewConfiguration() Configuration {
 							FormElement{Name: "enable", Type: "boolean", Default: true, Description: "Enable/Disable the share feature"},
 							FormElement{Name: "default_access", Type: "select", Default: "editor", Opts: []string{"editor", "viewer"}, Description: "Default access for shared links"},
 							FormElement{Name: "redirect", Type: "string", Placeholder: "redirection URL", Description: "When set, shared links will perform a redirection to another link. Example: https://example.com?full_path={{path}}"},
+						},
+					},
+					Form{
+						Title: "protection",
+						Elmnts: []FormElement{
+							FormElement{Name: "iframe", Type: "text", Default: "", Description: "list of domains who can use the application from an iframe. eg: https://www.filestash.app http://example.com"},
 						},
 					},
 				},
@@ -350,7 +355,6 @@ func (this Configuration) Export() interface{} {
 		Editor                  string            `json:"editor"`
 		ForkButton              bool              `json:"fork_button"`
 		DisplayHidden           bool              `json:"display_hidden"`
-		AutoConnect             bool              `json:"auto_connect"`
 		Name                    string            `json:"name"`
 		UploadButton            bool              `json:"upload_button"`
 		Connections             interface{}       `json:"connections"`
@@ -369,7 +373,6 @@ func (this Configuration) Export() interface{} {
 		Editor:                  this.Get("general.editor").String(),
 		ForkButton:              this.Get("general.fork_button").Bool(),
 		DisplayHidden:           this.Get("general.display_hidden").Bool(),
-		AutoConnect:             this.Get("general.auto_connect").Bool(),
 		Name:                    this.Get("general.name").String(),
 		UploadButton:            this.Get("general.upload_button").Bool(),
 		Connections:             this.Conn,

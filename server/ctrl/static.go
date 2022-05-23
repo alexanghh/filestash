@@ -86,12 +86,13 @@ func AboutHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 		<tr> <td style="width:150px;"> Commit hash </td> <td> <a href="https://github.com/mickael-kerjean/filestash/tree/{{ index .App 1}}">{{ index .App 1}}</a> </td> </tr>
 		<tr> <td> Binary hash </td> <td> {{ index .App 2}} </td> </tr>
 		<tr> <td> Config hash </td> <td> {{ index .App 3}} </td> </tr>
+		<tr> <td> License </td> <td> {{ index .App 4}} </td> </tr>
 		<tr>
           <td> Plugins </td>
           <td>
-            {{ $oss := (index .App 4) }}
-            {{ $enterprise := (index .App 5) }}
-            {{ $custom := (index .App 6) }}
+            {{ $oss := (index .App 5) }}
+            {{ $enterprise := (index .App 6) }}
+            {{ $custom := (index .App 7) }}
             STANDARD[<span class="small">{{ if eq $oss "" }}N/A{{ else }}{{ $oss }}{{ end }}</span>]<br/>
             EXTENDED[<span class="small">{{ if eq $enterprise "" }}N/A{{ else }}{{ $enterprise }}{{ end }}</span>]<br/>
             CUSTOM[<span class="small">{{ if eq $custom "" }}N/A{{ else }}{{ $custom }}{{ end }}</span>]
@@ -113,10 +114,40 @@ func AboutHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 		BUILD_REF,
 		hashFileContent(filepath.Join(GetCurrentDir(), "/filestash"), 0),
 		hashFileContent(filepath.Join(GetCurrentDir(), CONFIG_PATH, "config.json"), 0),
+		strings.ToUpper(LICENSE),
 		strings.Join(listOfPlugins["oss"], " "),
 		strings.Join(listOfPlugins["enterprise"], " "),
 		strings.Join(listOfPlugins["custom"], " "),
 	}})
+}
+
+func ManifestHandler(ctx App, res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(http.StatusFound)
+	res.Write([]byte(fmt.Sprintf(`{
+    "name": "%s",
+    "short_name": "%s",
+    "icons": [
+        {
+            "src": "/assets/logo/android-chrome-192x192.png",
+            "type": "image/png",
+            "sizes": "192x192"
+        },
+        {
+            "src": "/assets/logo/android-chrome-512x512.png",
+             "type": "image/png",
+             "sizes": "512x512"
+        }
+    ],
+    "theme_color": "#f2f3f5",
+    "background_color": "#f2f3f5",
+    "orientation": "any",
+    "display": "standalone",
+    "start_url": "/"
+}`, Config.Get("general.name"), Config.Get("general.name"))))
+}
+
+func RobotsHandler(ctx App, res http.ResponseWriter, req *http.Request) {
+	res.Write([]byte(""))
 }
 
 func InitPluginList(code []byte) {
@@ -152,6 +183,7 @@ func InitPluginList(code []byte) {
 
 func CustomCssHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "text/css")
+	io.WriteString(res, Hooks.Get.CSS())
 	io.WriteString(res, Config.Get("general.custom_css").String())
 }
 

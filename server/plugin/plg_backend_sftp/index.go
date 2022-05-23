@@ -24,7 +24,9 @@ func init() {
 	SftpCache = NewAppCache()
 	SftpCache.OnEvict(func(key string, value interface{}) {
 		c := value.(*Sftp)
-		c.Close()
+		if c != nil {
+			c.Close()
+		}
 	})
 }
 
@@ -113,14 +115,19 @@ func (s Sftp) Init(params map[string]string, app *App) (IBackend, error) {
 		User: p.username,
 		Auth: auth,
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			if params["hostkey"] == "" {
+			if params["hostkey"] == "" && strings.ToLower(os.Getenv("SFTP_INSECURE")) != "no" {
 				return nil
 			}
-			hostKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(params["hostkey"]))
-			if err != nil {
-				return err
+			fsha := ssh.FingerprintSHA256(key)
+			if fsha == params["hostkey"] {
+				return nil
 			}
-			return ssh.FixedHostKey(hostKey)(hostname, remote, key)
+			fmd := ssh.FingerprintLegacyMD5(key)
+			if fmd == params["hostkey"] {
+				return nil
+			}
+			Log.Debug("plg_backend_sftp::fingerprint host key isn't correct on %s => '%s'", hostname, fsha)
+			return ErrNotValid
 		},
 	}
 

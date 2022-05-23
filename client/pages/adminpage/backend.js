@@ -141,17 +141,15 @@ export class BackendPage extends React.Component {
             })(),
             "attribute_mapping": (function() {
                 let { related_backend = null, ...params } = objectGet(middlewareData, ["attribute_mapping"]) || {};
-                if (related_backend !== null) {
-                    return {
-                        "related_backend": related_backend || "N/A",
-                        "params": JSON.stringify(params),
-                    };
-                }
-                ({ related_backend, ...params } = objectGet(json, ["middleware", "attribute_mapping"]) || {});
-                return {
-                    "related_backend": related_backend || "N/A",
-                    "params": JSON.stringify(params),
+                const obj = {
+                    "related_backend": related_backend || "N/A"
                 };
+                if(Object.keys(params).length > 0) {
+                    obj.params = JSON.stringify(params, (key, value) => {
+                        if (value !== null) return value
+                    });
+                }
+                return obj;
             })(),
         };
 
@@ -378,7 +376,7 @@ function AuthenticationMiddleware({ authentication_available, authentication_ena
             if (attribute_mapping[selected[i].label]) continue;
             for (let j=0; j<existingValues.length; j++) {
                 if (selected[i].label === existingValues[j]) {
-                    attribute_mapping[selected[i].label] = backend_available[selected[i].type];
+                    attribute_mapping[selected[i].label] = JSON.parse(JSON.stringify(backend_available[selected[i].type]));
                     needToSave = true;
                 }
             }

@@ -143,6 +143,26 @@ func (this Get) XDGOpen() []string {
 	return xdg_open
 }
 
+var cssOverride []func() string
+
+func (this Register) CSS(stylesheet string) {
+	cssOverride = append(cssOverride, func() string {
+		return stylesheet
+	})
+}
+
+func (this Register) CSSFunc(stylesheet func() string) {
+	cssOverride = append(cssOverride, stylesheet)
+}
+
+func (this Get) CSS() string {
+	s := ""
+	for i := 0; i < len(cssOverride); i++ {
+		s += cssOverride[i]() + "\n"
+	}
+	return s
+}
+
 const OverrideVideoSourceMapper = "/overrides/video-transcoder.js"
 
 func init() {
