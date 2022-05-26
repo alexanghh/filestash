@@ -26,7 +26,10 @@ class FileSystemComponent extends React.PureComponent {
         return this.props.connectDropFile(
             <div className="component_filesystem">
                 <Container>
-                    <div className="box">Total: {this.props.totalNumFiles} items | Showing: {this.props.files.length} items </div>
+                    <div className="box">
+                        Total: {this.props.totalNumFiles} items {this.props.totalNumFiles === window.CONFIG["max_result_size"] && this.props.isSearch ? "(search limit) " : "" }
+                        | Showing: {this.props.files.length} items
+                    </div>
                     <NewThing
                         path={this.props.path} sort={this.props.sort}
                         view={this.props.view} onViewUpdate={(value) => this.props.onView(value)}
@@ -81,6 +84,7 @@ FileSystemComponent.propTypes = {
     view: PropTypes.string.isRequired,
     onView: PropTypes.func.isRequired,
     onSort: PropTypes.func.isRequired,
+    isSearch: PropTypes.bool.isRequired,
 };
 
 export const FileSystem = HOCDropTargetForFSFile(FileSystemComponent);

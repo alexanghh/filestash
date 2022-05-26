@@ -369,6 +369,7 @@ func (this Configuration) Export() interface{} {
 		FilePageDefaultView     string            `json:"default_view"`
 		EnableInlineDownload    bool              `json:"enable_inline_download"`
 		AuthMiddleware          interface{}       `json:"auth"`
+		MaxResultSize           int               `json:"max_result_size"`
 	}{
 		Editor:                  this.Get("general.editor").String(),
 		ForkButton:              this.Get("general.fork_button").Bool(),
@@ -386,6 +387,7 @@ func (this Configuration) Export() interface{} {
 		FilePageDefaultSort:     this.Get("general.filepage_default_sort").String(),
 		FilePageDefaultView:     this.Get("general.filepage_default_view").String(),
 		EnableInlineDownload:    this.Get("general.download_button").Bool(),
+		MaxResultSize:           this.Get("features.elasticsearch.max_result_size").Int(),
 		AuthMiddleware: func() string {
 			if this.Get("middleware.identity_provider.type").String() == "" {
 				return ""
