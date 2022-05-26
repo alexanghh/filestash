@@ -108,7 +108,7 @@ class SubmenuComponent extends React.Component {
 
     onSearchKeypress(s, backpressure = true, e) {
         if (backpressure) {
-            this.onSearchChange_Backpressure(s);
+            // this.onSearchChange_Backpressure(s); // disable search on typing
         } else {
             this.onSearchChange(s);
         }
