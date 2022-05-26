@@ -143,13 +143,11 @@ func OpenIDGetURL() string {
 	OpenIDTokenEndpoint = d.TokenEndpoint
 	OpenIDUserInfoEndpoint = d.UserInfoEndpoint
 	url := OpenID().AuthCodeURL("s3sts") + "&nonce=" + OpenIDCreateNonce()
-	Log.Info("oauth2 - url[%s]", url)
 	return url
 }
 
 func OAuth2Authenticate(code string) (*oauth2.Token, error) {
 	Log.Info("oauth2::authenticate")
-	Log.Debug("oauth2 - code[%s]", code)
 	token, err := OpenID().Exchange(context.Background(), code)
 	if err != nil {
 		Log.Warning("oauth2::error - couldn't exchange code for token: %+v", err)
@@ -159,7 +157,6 @@ func OAuth2Authenticate(code string) (*oauth2.Token, error) {
 		Log.Warning("oauth2::error - token is not valid")
 		return nil, ErrNotValid
 	}
-	Log.Debug("oauth2 - id_token[%s]", token.Extra("id_token").(string))
 	return token, nil
 }
 
