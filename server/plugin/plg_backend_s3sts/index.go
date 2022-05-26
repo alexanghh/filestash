@@ -10,8 +10,6 @@ import (
 	"golang.org/x/oauth2"
 	"io"
 	"os"
-	"strconv"
-	"time"
 )
 
 func init() {
@@ -37,7 +35,9 @@ type S3STSBackend struct {
 }
 
 func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, error) {
+	Log.Debug("s3sts - Init")
 	if params["code"] != "" {
+		Log.Debug("s3sts - OAuth2Authenticate")
 		token, err := OAuth2Authenticate(params["code"])
 		if err != nil {
 			Log.Error("s3sts::init 'OAuth2Authenticate' %+v", err)
@@ -47,31 +47,27 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 
 		params["id_token"] = token.Extra("id_token").(string)
 		params["refresh_token"] = token.RefreshToken
-		params["expiry"] = strconv.FormatInt(token.Expiry.Unix(), 10)
+		Log.Debug("s3sts::Init OAuth2Authenticate - refresh_token: %s", token.RefreshToken)
+		Log.Debug("s3sts - OAuth2Authenticate ok")
 	} else {
-		if params["refresh_token"] != "" && params["expiry"] != "" {
-			expiry, err := strconv.ParseInt(params["expiry"], 10, 64)
+		// always refresh token
+		if params["refresh_token"] != "" {
+			Log.Debug("::Init - OAuth2RefreshToken")
+			refreshToken := new(oauth2.Token)
+			refreshToken.RefreshToken = params["refresh_token"]
+			token, err := OAuth2RefreshToken(refreshToken)
 			if err != nil {
-				Log.Error("s3sts::init 'refresh token check expiry'", err.Error())
-				return nil, err
-			}
-			if expiry < time.Now().Unix() {
-				refreshToken := new(oauth2.Token)
-				refreshToken.RefreshToken = params["refresh_token"]
-				token, err := OAuth2RefreshToken(refreshToken)
-				if err != nil {
-					Log.Error("s3sts::init 'OAuth2Refresh' %+v", err)
-					return nil, ErrAuthenticationFailed
-				}
-
+				Log.Warning("s3sts::init 'OAuth2Refresh' %+v", err)
+			} else {
 				params["id_token"] = token.Extra("id_token").(string)
 				params["refresh_token"] = token.RefreshToken
-				params["expiry"] = strconv.FormatInt(token.Expiry.Unix(), 10)
+				Log.Debug("s3sts - OAuth2RefreshToken ok")
 			}
 		}
 	}
 
 	if params["id_token"] != "" {
+		Log.Debug("s3sts - AssumeRoleWithWebIdentityInput")
 		if err := OpenIDVerifyToken(params["id_token"]); err != nil {
 			Log.Error("s3sts::init 'OpenIDVerifyToken'", err.Error())
 			return nil, ErrAuthenticationFailed
@@ -122,27 +118,30 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 		}
 
 		credentials := result.Credentials
-		params["id_token"] = ""
 		params["access_key_id"] = *credentials.AccessKeyId
 		params["secret_access_key"] = *credentials.SecretAccessKey
 		params["session_token"] = *credentials.SessionToken
-		Log.Debug("s3sts - success param [%v]", params)
+		Log.Debug("s3sts - AssumeRoleWithWebIdentity ok")
 	}
 
 	if params["access_key_id"] != "" && params["secret_access_key"] != "" && params["session_token"] != "" {
-		Log.Debug("s3sts - sts access_key_id [%s]", params["access_key_id"])
+		Log.Debug("s3sts - sts init S3Backend")
 		backend, err := s3.S3Backend{}.Init(params, app)
 		if err != nil {
 			Log.Error("s3sts::init 's3 init'", err.Error())
 			return nil, ErrAuthenticationFailed
 		}
+		params["access_key_id"] = ""
+		params["secret_access_key"] = ""
+		params["session_token"] = ""
+
 		// check backend is usable
 		_, err = backend.Ls("/")
 		if err != nil {
 			Log.Error("s3sts::init 'ls'", err.Error())
 			return nil, err
 		}
-		Log.Debug("s3sts::init backend ok")
+		Log.Debug("s3sts::init S3Backend ok")
 		this.Backend = backend
 	}
 
