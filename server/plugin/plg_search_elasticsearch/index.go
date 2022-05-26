@@ -15,16 +15,17 @@ const highlight_pre_tag = "<span id=\"search_result\">"
 const highlight_post_tag = "</span>"
 
 type ElasticSearch struct {
-	Es7           *elasticsearch7.Client
-	Index         string
-	PathField     string
-	ContentField  string
-	SizeField     string
-	TimeField     string
-	PreTags       string
-	PostTags      string
-	NumFragment   int
-	MaxResultSize int
+	Es7               *elasticsearch7.Client
+	Index             string
+	PathField         string
+	ContentField      string
+	SizeField         string
+	TimeField         string
+	PreTags           string
+	PostTags          string
+	NumFragment       int
+	MaxAnalyzedOffset int
+	MaxResultSize     int
 }
 
 func init() {
@@ -209,6 +210,18 @@ func init() {
 		f.Placeholder = "Eg: 5"
 		return f
 	})
+	Config.Get("features.elasticsearch.max_analyzed_offset").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "max_analyzed_offset"
+		f.Name = "max_analyzed_offset"
+		f.Type = "number"
+		f.Description = "Maximum number of characters in search result that will be analyzed for highlight. Setting this value too high will crash elasticsearch."
+		f.Default = 1000000
+		f.Placeholder = "Eg: 1000000"
+		return f
+	})
 	Config.Get("features.elasticsearch.max_result_size").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
@@ -274,16 +287,17 @@ func init() {
 	Log.Debug(strings.Repeat("~", 37))
 
 	es := &ElasticSearch{
-		Es7:           es7,
-		Index:         Config.Get("features.elasticsearch.index").String(),
-		PathField:     Config.Get("features.elasticsearch.field_path").String(),
-		ContentField:  Config.Get("features.elasticsearch.field_content").String(),
-		SizeField:     Config.Get("features.elasticsearch.field_size").String(),
-		TimeField:     Config.Get("features.elasticsearch.field_time").String(),
-		PreTags:       Config.Get("features.elasticsearch.pre_tags").String(),
-		PostTags:      Config.Get("features.elasticsearch.post_tags").String(),
-		NumFragment:   Config.Get("features.elasticsearch.num_fragment").Int(),
-		MaxResultSize: Config.Get("features.elasticsearch.max_result_size").Int(),
+		Es7:               es7,
+		Index:             Config.Get("features.elasticsearch.index").String(),
+		PathField:         Config.Get("features.elasticsearch.field_path").String(),
+		ContentField:      Config.Get("features.elasticsearch.field_content").String(),
+		SizeField:         Config.Get("features.elasticsearch.field_size").String(),
+		TimeField:         Config.Get("features.elasticsearch.field_time").String(),
+		PreTags:           Config.Get("features.elasticsearch.pre_tags").String(),
+		PostTags:          Config.Get("features.elasticsearch.post_tags").String(),
+		NumFragment:       Config.Get("features.elasticsearch.num_fragment").Int(),
+		MaxAnalyzedOffset: Config.Get("features.elasticsearch.max_analyzed_offset").Int(),
+		MaxResultSize:     Config.Get("features.elasticsearch.max_result_size").Int(),
 	}
 
 	Hooks.Register.SearchEngine(es)
@@ -314,6 +328,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			},
 		},
 		"highlight": map[string]interface{}{
+			"max_analyzed_offset": this.MaxAnalyzedOffset,
 			"number_of_fragments": this.NumFragment,
 			"pre_tags":            [1]string{highlight_pre_tag + this.PreTags},
 			"post_tags":           [1]string{this.PostTags + highlight_post_tag},
