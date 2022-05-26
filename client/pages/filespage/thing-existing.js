@@ -467,7 +467,7 @@ class SearchSnippet extends React.Component {
             return
         const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
         this.setState({scrollIndex: newScrollIndex})
-        this.state.resultsRef.current.scrollTop = results[newScrollIndex].offsetTop
+        results[newScrollIndex].scrollIntoView()
     }
 
     onScrollNextResult() {
@@ -478,7 +478,7 @@ class SearchSnippet extends React.Component {
             return
         const newScrollIndex = (this.state.scrollIndex + 1) % results.length
         this.setState({scrollIndex: newScrollIndex})
-        this.state.resultsRef.current.scrollTop = results[newScrollIndex].offsetTop
+        results[newScrollIndex].scrollIntoView()
     }
 
     onTogglePreview() {
