@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const highlight_pre_tag = "<span id=\"search_result\">"
+const highlight_pre_tag = "<span id=\"search_result\" style=\"background-color: #FFFF00\">"
 const highlight_post_tag = "</span>"
 
 type ElasticSearch struct {
@@ -21,8 +21,6 @@ type ElasticSearch struct {
 	ContentField      string
 	SizeField         string
 	TimeField         string
-	PreTags           string
-	PostTags          string
 	NumFragment       int
 	MaxAnalyzedOffset int
 	MaxResultSize     int
@@ -174,30 +172,6 @@ func init() {
 		}
 		return f
 	})
-	Config.Get("features.elasticsearch.pre_tags").Schema(func(f *FormElement) *FormElement {
-		if f == nil {
-			f = &FormElement{}
-		}
-		f.Id = "pre_tags"
-		f.Name = "pre_tags"
-		f.Type = "text"
-		f.Description = "pre_tags for highlighting"
-		f.Default = "<em>"
-		f.Placeholder = "Eg: <em>"
-		return f
-	})
-	Config.Get("features.elasticsearch.post_tags").Schema(func(f *FormElement) *FormElement {
-		if f == nil {
-			f = &FormElement{}
-		}
-		f.Id = "post_tags"
-		f.Name = "post_tags"
-		f.Type = "text"
-		f.Description = "post_tags for highlighting"
-		f.Default = "</em>"
-		f.Placeholder = "Eg: </em>"
-		return f
-	})
 	Config.Get("features.elasticsearch.num_fragment").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
@@ -293,8 +267,6 @@ func init() {
 		ContentField:      Config.Get("features.elasticsearch.field_content").String(),
 		SizeField:         Config.Get("features.elasticsearch.field_size").String(),
 		TimeField:         Config.Get("features.elasticsearch.field_time").String(),
-		PreTags:           Config.Get("features.elasticsearch.pre_tags").String(),
-		PostTags:          Config.Get("features.elasticsearch.post_tags").String(),
 		NumFragment:       Config.Get("features.elasticsearch.num_fragment").Int(),
 		MaxAnalyzedOffset: Config.Get("features.elasticsearch.max_analyzed_offset").Int(),
 		MaxResultSize:     Config.Get("features.elasticsearch.max_result_size").Int(),
@@ -304,6 +276,13 @@ func init() {
 }
 
 func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, error) {
+	// check path valid and user has list permission
+	_, err := app.Backend.Ls(path)
+	if err != nil {
+		Log.Error("ES::query Error accessing search path: %s", err)
+		return nil, err
+	}
+
 	Log.Debug("ES::Query path: %s, keyword, %s", path, keyword)
 	if path == "/" {
 		if Config.Get("features.elasticsearch.enable_root_search").Bool() {
@@ -330,8 +309,8 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		"highlight": map[string]interface{}{
 			"max_analyzed_offset": this.MaxAnalyzedOffset,
 			"number_of_fragments": this.NumFragment,
-			"pre_tags":            [1]string{highlight_pre_tag + this.PreTags},
-			"post_tags":           [1]string{this.PostTags + highlight_post_tag},
+			"pre_tags":            [1]string{highlight_pre_tag},
+			"post_tags":           [1]string{highlight_post_tag},
 			"fields": map[string]interface{}{
 				this.ContentField: map[string]interface{}{},
 			},
