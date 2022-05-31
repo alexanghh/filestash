@@ -264,7 +264,6 @@ export class FilesPageComponent extends React.Component {
     }
 
     toggleHighlight(object) {
-        console.log("toggleHighlight: " + object)
         if (this.state.highlighted !== null) {
             this.state.highlighted.className = "box fullpath"
         }
