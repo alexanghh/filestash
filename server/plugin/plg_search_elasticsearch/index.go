@@ -276,13 +276,6 @@ func init() {
 }
 
 func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, error) {
-	// check path valid and user has list permission
-	_, err := app.Backend.Ls(path)
-	if err != nil {
-		Log.Error("ES::query Error accessing search path: %s", err)
-		return nil, err
-	}
-
 	Log.Debug("ES::Query path: %s, keyword, %s", path, keyword)
 	if path == "/" {
 		if Config.Get("features.elasticsearch.enable_root_search").Bool() {
@@ -294,6 +287,13 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	var (
 		r map[string]interface{}
 	)
+
+	// check path valid and user has list permission
+	_, err := app.Backend.Ls(path)
+	if err != nil {
+		Log.Error("ES::query Error accessing search path: %s", err)
+		return nil, err
+	}
 
 	// Build the request body.
 	// Path must be keyword type to restrict search. Otherwise, search may be global.
