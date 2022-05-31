@@ -15,6 +15,7 @@ import (
 func init() {
 	Backend.Register("s3sts", S3STSBackend{})
 	stsEndpoint()
+	useIdToken()
 }
 
 var stsEndpoint = func() string {
@@ -30,8 +31,30 @@ var stsEndpoint = func() string {
 	}).String()
 }
 
+var useIdToken = func() bool {
+	return Config.Get("s3sts.openid.use_id_token").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Default = true
+		f.Name = "use_id_token"
+		f.Type = "boolean"
+		f.Target = []string{}
+		f.Description = "Enable to use id token. Disable to use access token."
+		f.Placeholder = "Default: true"
+		return f
+	}).Bool()
+}
+
 type S3STSBackend struct {
 	Backend IBackend
+}
+
+func GetToken(token *oauth2.Token) string {
+	if useIdToken() {
+		return token.Extra("id_token").(string)
+	}
+	return token.AccessToken
 }
 
 func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, error) {
@@ -45,9 +68,8 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 		}
 		params["code"] = ""
 
-		params["id_token"] = token.Extra("id_token").(string)
+		params["token"] = GetToken(token)
 		params["refresh_token"] = token.RefreshToken
-		Log.Debug("s3sts::Init OAuth2Authenticate - refresh_token: %s", token.RefreshToken)
 		Log.Debug("s3sts - OAuth2Authenticate ok")
 	} else {
 		// always refresh token
@@ -59,16 +81,16 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			if err != nil {
 				Log.Warning("s3sts::init 'OAuth2Refresh' %+v", err)
 			} else {
-				params["id_token"] = token.Extra("id_token").(string)
+				params["token"] = GetToken(token)
 				params["refresh_token"] = token.RefreshToken
 				Log.Debug("s3sts - OAuth2RefreshToken ok")
 			}
 		}
 	}
 
-	if params["id_token"] != "" {
+	if params["token"] != "" {
 		Log.Debug("s3sts - AssumeRoleWithWebIdentityInput")
-		if err := OpenIDVerifyToken(params["id_token"]); err != nil {
+		if err := OpenIDVerifyToken(params["token"]); err != nil {
 			Log.Error("s3sts::init 'OpenIDVerifyToken'", err.Error())
 			return nil, ErrAuthenticationFailed
 		}
@@ -85,7 +107,7 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			DurationSeconds:  aws.Int64(3600),
 			RoleArn:          aws.String("arn:aws:iam::123456789012:role/FederatedWebIdentityRole"),
 			RoleSessionName:  aws.String("filestash"),
-			WebIdentityToken: aws.String(params["id_token"]),
+			WebIdentityToken: aws.String(params["token"]),
 		}
 
 		result, err := svc.AssumeRoleWithWebIdentity(input)
