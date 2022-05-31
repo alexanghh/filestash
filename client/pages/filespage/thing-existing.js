@@ -450,6 +450,7 @@ class SearchSnippet extends React.Component {
         this.onScrollPrevResult = this.onScrollPrevResult.bind(this);
         this.onScrollNextResult = this.onScrollNextResult.bind(this);
         this.onTogglePreview = this.onTogglePreview.bind(this);
+        this.scrollParentToChild = this.scrollParentToChild.bind(this);
     }
 
     componentDidMount() {
@@ -457,6 +458,22 @@ class SearchSnippet extends React.Component {
             return
         this.onScrollNextResult();
         this.onTogglePreview();
+    }
+
+    scrollParentToChild(parent, child) {
+        // get parent on page
+        var parentRect = parent.getBoundingClientRect();
+        var parentViewableArea = {
+            height: parent.clientHeight,
+            width: parent.clientWidth
+        };
+
+        // get child
+        var childRect = child.getBoundingClientRect();
+        // scroll parent
+        const scrollTop = childRect.top - parentRect.top;
+        const offset = ((parentRect.bottom - parentRect.top) / 2 ) - 10;
+        parent.scrollTop += scrollTop - offset;
     }
 
     onScrollPrevResult() {
@@ -467,7 +484,7 @@ class SearchSnippet extends React.Component {
             return
         const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
         this.setState({scrollIndex: newScrollIndex})
-        results[newScrollIndex].scrollIntoView()
+        this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
 
     onScrollNextResult() {
@@ -478,7 +495,7 @@ class SearchSnippet extends React.Component {
             return
         const newScrollIndex = (this.state.scrollIndex + 1) % results.length
         this.setState({scrollIndex: newScrollIndex})
-        results[newScrollIndex].scrollIntoView()
+        this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
 
     onTogglePreview() {
@@ -486,7 +503,6 @@ class SearchSnippet extends React.Component {
             return
         if (this.state.resultsRef.current.style.display === "none") {
             this.state.resultsRef.current.style.display = "block"
-            console.log("onTogglePreview: " + this.state.detailsRef)
             this.props.onClickHighlight(this.state.detailsRef.current);
             this.setState({preview_visible: true})
         } else {
