@@ -447,17 +447,35 @@ class SearchSnippet extends React.Component {
         this.detailsRef = React.createRef();
         this.resultsRef = React.createRef();
         this.state = {scrollIndex: -1, detailsRef: this.detailsRef, resultsRef: this.resultsRef, preview_visible: true};
+        this.state.snippet = ""
         this.onScrollPrevResult = this.onScrollPrevResult.bind(this);
         this.onScrollNextResult = this.onScrollNextResult.bind(this);
         this.onTogglePreview = this.onTogglePreview.bind(this);
         this.scrollParentToChild = this.scrollParentToChild.bind(this);
+        this.checkSnippetLoaded = this.checkSnippetLoaded.bind(this);
     }
 
     componentDidMount() {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
-        this.onScrollNextResult();
         this.onTogglePreview();
+        this.observer = new MutationObserver(this.checkSnippetLoaded);
+        this.observer.observe(this.resultsRef.current, {
+            // Check config in https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver
+            childList: true,
+            attributes: true,
+            characterData: true
+        });
+    }
+
+    componentWillUnmount() {
+        if(this.observer !== undefined && this.observer !== null)
+            this.observer.disconnect();
+    }
+
+    checkSnippetLoaded() {
+        if(this.resultsRef.current.innerHTML !== undefined && this.resultsRef.current.innerHTML !== null && this.resultsRef.current.innerHTML.length > 0)
+            this.onScrollNextResult() // scroll to first result when snippet is first loaded
     }
 
     scrollParentToChild(parent, child) {
@@ -477,22 +495,24 @@ class SearchSnippet extends React.Component {
     }
 
     onScrollPrevResult() {
-        if (this.props.snippet === undefined || this.props.snippet === "")
+        if (this.props.snippet === undefined || this.props.snippet === "" || this.state.resultsRef.current === undefined || this.state.resultsRef.current === null)
             return
         const results = this.state.resultsRef.current.querySelectorAll("#search_result")
         if (results === undefined || results.length === 0)
-            return
+            return // no search elements found
         const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
         this.setState({scrollIndex: newScrollIndex})
         this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
 
     onScrollNextResult() {
-        if (this.props.snippet === undefined || this.props.snippet === "")
+        if (this.props.snippet === undefined || this.props.snippet === "" || this.state.resultsRef.current === undefined || this.state.resultsRef.current === null)
             return
         const results = this.state.resultsRef.current.querySelectorAll("#search_result")
-        if (results === undefined || results.length === 0)
-            return
+        if (results === undefined || results.length === 0) {
+            return // no search elements found
+        }
+
         const newScrollIndex = (this.state.scrollIndex + 1) % results.length
         this.setState({scrollIndex: newScrollIndex})
         this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
@@ -502,12 +522,17 @@ class SearchSnippet extends React.Component {
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
         if (this.state.resultsRef.current.style.display === "none") {
+            // set snippet
+            this.setState({preview_visible: true, scrollIndex: -1, snippet: this.props.snippet});
+            // show div
             this.state.resultsRef.current.style.display = "block"
             this.props.onClickHighlight(this.state.detailsRef.current);
-            this.setState({preview_visible: true})
         } else {
+            // hide div
             this.state.resultsRef.current.style.display = "none"
             this.setState({preview_visible: false})
+            // reset div and scroll state
+            this.setState({snippet: ""});
         }
     }
 
@@ -540,7 +565,7 @@ class SearchSnippet extends React.Component {
                 </div>
                 <div ref={this.resultsRef}
                      className="box snippet"
-                     dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.props.snippet)}} />
+                     dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(this.state.snippet)}} />
             </NgIf>
         );
     }
@@ -728,7 +753,7 @@ class LazyLoadImage extends React.Component {
             <img
                 onError={this.onError.bind(this)}
                 className={this.props.className}
-                src={this.props.src} />
+                src={this.props.src}/>
         );
     }
 }
