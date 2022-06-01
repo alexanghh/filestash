@@ -306,6 +306,8 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 				"query":  "(" + this.PathField + ":" + strings.ReplaceAll(path, "/", "\\/") + "*) AND (" + keyword + ")",
 			},
 		},
+		"_source": false,
+		"fields":  [3]string{this.PathField, this.SizeField, this.TimeField},
 		"highlight": map[string]interface{}{
 			"max_analyzed_offset": this.MaxAnalyzedOffset,
 			"number_of_fragments": this.NumFragment,
@@ -378,9 +380,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	// Print the ID and document source for each hit.
 	for _, hit := range r["hits"].(map[string]interface{})["hits"].([]interface{}) {
 
-		resPath := hit.(map[string]interface{})["_source"].(map[string]interface{})[this.PathField].(string)
-		size := int64(hit.(map[string]interface{})["_source"].(map[string]interface{})[this.SizeField].(float64))
-		time := int64(hit.(map[string]interface{})["_source"].(map[string]interface{})[this.TimeField].(float64) * 1000) // FTime in msecs
+		resPath := hit.(map[string]interface{})["fields"].(map[string]interface{})[this.PathField].([]interface{})[0].(string)
+		size := int64(hit.(map[string]interface{})["fields"].(map[string]interface{})[this.SizeField].([]interface{})[0].(float64))
+		time := int64(hit.(map[string]interface{})["fields"].(map[string]interface{})[this.TimeField].([]interface{})[0].(float64) * 1000) // FTime in msecs
 
 		pathTokens := strings.Split(resPath, "/")
 		resFilename := pathTokens[len(pathTokens)-1]
@@ -393,6 +395,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 					snippet = snippet + contentHighlight.(string) + "<hr style=\"height:1px;border-width:0;color:gray;background-color:gray\" />"
 				}
 			}
+		}
+		if len(snippet) == 0 {
+			snippet = resPath
 		}
 
 		files = append(files, File{
