@@ -3,10 +3,12 @@ package plg_search_elasticsearch
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	elasticsearch7 "github.com/elastic/go-elasticsearch/v7"
 	. "github.com/mickael-kerjean/filestash/server/common"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -82,11 +84,11 @@ func init() {
 		}
 		f.Id = "password"
 		f.Name = "password"
-		f.Type = "text"
+		f.Type = "password"
 		f.Description = "Password for connecting to Elasticsearch"
 		f.Default = ""
 		f.Placeholder = "Eg: password"
-		if u := os.Getenv("ELASTICSEARCH_USERNAME"); u != "" {
+		if u := os.Getenv("ELASTICSEARCH_PASSWORD"); u != "" {
 			f.Default = u
 			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
 		}
@@ -219,6 +221,21 @@ func init() {
 		f.Default = false
 		return f
 	})
+	Config.Get("features.elasticsearch.enable_self_signed").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Default = true
+		f.Name = "enable_self_signed"
+		f.Type = "boolean"
+		f.Target = []string{}
+		f.Description = "Enable/Disable self signed cert on ES cluster."
+		f.Placeholder = "Default: true"
+		if u := os.Getenv("ELASTICSEARCH_ENABLE_SELF_SIGNED"); u != "" {
+			f.Default = true
+		}
+		return f
+	})
 
 	cfg := elasticsearch7.Config{
 		Addresses: strings.Split(Config.Get("features.elasticsearch.url").String(), ","),
@@ -228,6 +245,14 @@ func init() {
 	}
 	if Config.Get("features.elasticsearch.password").String() != "" {
 		cfg.Password = Config.Get("features.elasticsearch.password").String()
+	}
+
+	//https://stackoverflow.com/questions/37557763
+	if Config.Get("features.elasticsearch.enable_self_signed").Bool() {
+		transport := http.DefaultTransport
+		tlsClientConfig := &tls.Config{InsecureSkipVerify: true}
+		transport.(*http.Transport).TLSClientConfig = tlsClientConfig
+		cfg.Transport = transport
 	}
 
 	var (
