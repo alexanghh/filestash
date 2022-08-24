@@ -1,8 +1,9 @@
 import React from "react";
 import { currentShare } from "../../helpers/";
 import "./appframe.scss";
+import {MenuBar} from "./menubar";
 
-export function AppFrame({ args, data }) {
+export function AppFrame({ args, data, filename, path }) {
     let error = null;
     if (!args) {
         error = "Missing configuration. Contact your administrator";
@@ -18,7 +19,8 @@ export function AppFrame({ args, data }) {
     }
     return (
         <div className="component_appframe">
-            <iframe src={args.endpoint + "?path=" + data + "&share=" + currentShare()} />
+            <MenuBar title={filename} download={data} />
+            <iframe src={args.endpoint + "?path=" + path + "&share=" + currentShare()} />
         </div>
     );
 }

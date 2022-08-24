@@ -184,7 +184,7 @@ export function ViewerPageComponent({ error, subscribe, unsubscribe, match, loca
                         <FileDownloader data={state.url} filename={filename} />
                     </NgIf>
                     <NgIf cond={state.opener === "appframe"}>
-                        <Appframe data={path} filename={filename} args={state.application_arguments} />
+                        <Appframe path={path} data={state.url} filename={filename} args={state.application_arguments} />
                     </NgIf>
                 </NgIf>
             </div>

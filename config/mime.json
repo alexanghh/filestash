@@ -36,6 +36,7 @@
 	"dpkg": "application/dpkg-www-installer",
 	"ds_store": "application/octet-stream",
 	"ear": "application/java-archive",
+    "eml": "message/rfc822",
 	"eot": "application/vnd.ms-fontobject",
 	"eps": "application/postscript",
 	"erf": "image/x-epson-erf",

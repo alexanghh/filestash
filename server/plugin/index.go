@@ -33,6 +33,7 @@ import (
 
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_authorisation_readonly"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_s3sts"
+	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_editor_eml"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_search_elasticsearch"
 )
 
