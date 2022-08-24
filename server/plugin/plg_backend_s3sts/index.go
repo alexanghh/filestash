@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	. "github.com/mickael-kerjean/filestash/server/common"
 	s3 "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_s3"
+	mcredentials "github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/oauth2"
 	"io"
 	"os"
@@ -15,7 +16,7 @@ import (
 func init() {
 	Backend.Register("s3sts", S3STSBackend{})
 	stsEndpoint()
-	useIdToken()
+	minio_userinfo_enable()
 }
 
 var stsEndpoint = func() string {
@@ -31,30 +32,23 @@ var stsEndpoint = func() string {
 	}).String()
 }
 
-var useIdToken = func() bool {
-	return Config.Get("s3sts.openid.use_id_token").Schema(func(f *FormElement) *FormElement {
+var minio_userinfo_enable = func() bool {
+	return Config.Get("s3sts.openid.enable_minio_userinfo").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
 		}
-		f.Default = true
-		f.Name = "use_id_token"
+		f.Default = false
+		f.Name = "enable_minio_userinfo"
 		f.Type = "boolean"
 		f.Target = []string{}
-		f.Description = "Enable to use id token. Disable to use access token."
-		f.Placeholder = "Default: true"
+		f.Description = "Enable fetching claims from UserInfo Endpoint for authenticated user in MinIO."
+		f.Placeholder = "Default: false"
 		return f
 	}).Bool()
 }
 
 type S3STSBackend struct {
 	Backend IBackend
-}
-
-func GetToken(token *oauth2.Token) string {
-	if useIdToken() {
-		return token.Extra("id_token").(string)
-	}
-	return token.AccessToken
 }
 
 func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, error) {
@@ -67,8 +61,8 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			return nil, ErrAuthenticationFailed
 		}
 		params["code"] = ""
-
-		params["token"] = GetToken(token)
+		params["id_token"] = token.Extra("id_token").(string)
+		params["access_token"] = token.AccessToken
 		params["refresh_token"] = token.RefreshToken
 		Log.Debug("s3sts - OAuth2Authenticate ok")
 	} else {
@@ -81,68 +75,93 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			if err != nil {
 				Log.Warning("s3sts::init 'OAuth2Refresh' %+v", err)
 			} else {
-				params["token"] = GetToken(token)
+				params["id_token"] = token.Extra("id_token").(string)
+				params["access_token"] = token.AccessToken
 				params["refresh_token"] = token.RefreshToken
 				Log.Debug("s3sts - OAuth2RefreshToken ok")
 			}
 		}
 	}
 
-	if params["token"] != "" {
+	if params["id_token"] != "" {
 		Log.Debug("s3sts - AssumeRoleWithWebIdentityInput")
-		if err := OpenIDVerifyToken(params["token"]); err != nil {
+		if err := OpenIDVerifyToken(params["id_token"]); err != nil {
 			Log.Error("s3sts::init 'OpenIDVerifyToken'", err.Error())
 			return nil, ErrAuthenticationFailed
 		}
 
 		params["endpoint"] = stsEndpoint()
-		config := &aws.Config{
-			Region:   aws.String("us-east-2"),
-			Endpoint: aws.String(params["endpoint"]),
-		}
-		svc := sts.New(session.New(config))
-		Log.Debug("s3sts - sts session ok")
 
-		input := &sts.AssumeRoleWithWebIdentityInput{
-			DurationSeconds:  aws.Int64(3600),
-			RoleArn:          aws.String("arn:aws:iam::123456789012:role/FederatedWebIdentityRole"),
-			RoleSessionName:  aws.String("filestash"),
-			WebIdentityToken: aws.String(params["token"]),
-		}
-
-		result, err := svc.AssumeRoleWithWebIdentity(input)
-		if err != nil {
-			if aerr, ok := err.(awserr.Error); ok {
-				switch aerr.Code() {
-				case sts.ErrCodeMalformedPolicyDocumentException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeMalformedPolicyDocumentException, aerr.Error())
-				case sts.ErrCodePackedPolicyTooLargeException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodePackedPolicyTooLargeException, aerr.Error())
-				case sts.ErrCodeIDPRejectedClaimException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeIDPRejectedClaimException, aerr.Error())
-				case sts.ErrCodeIDPCommunicationErrorException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeIDPCommunicationErrorException, aerr.Error())
-				case sts.ErrCodeInvalidIdentityTokenException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeInvalidIdentityTokenException, aerr.Error())
-				case sts.ErrCodeExpiredTokenException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeExpiredTokenException, aerr.Error())
-				case sts.ErrCodeRegionDisabledException:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeRegionDisabledException, aerr.Error())
-				default:
-					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", aerr.Error())
-				}
-			} else {
-				// Print the error, cast err to awserr.Error to get the Code and
-				// Message from an error.
-				Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", err.Error())
+		if !minio_userinfo_enable() {
+			config := &aws.Config{
+				Region:   aws.String("us-east-2"),
+				Endpoint: aws.String(params["endpoint"]),
 			}
-			return nil, ErrAuthenticationFailed
+			svc := sts.New(session.New(config))
+			Log.Debug("s3sts - sts session ok")
+
+			input := &sts.AssumeRoleWithWebIdentityInput{
+				DurationSeconds:  aws.Int64(3600),
+				RoleArn:          aws.String("arn:aws:iam::123456789012:role/FederatedWebIdentityRole"),
+				RoleSessionName:  aws.String("filestash"),
+				WebIdentityToken: aws.String(params["id_token"]),
+			}
+
+			result, err := svc.AssumeRoleWithWebIdentity(input)
+			if err != nil {
+				if aerr, ok := err.(awserr.Error); ok {
+					switch aerr.Code() {
+					case sts.ErrCodeMalformedPolicyDocumentException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeMalformedPolicyDocumentException, aerr.Error())
+					case sts.ErrCodePackedPolicyTooLargeException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodePackedPolicyTooLargeException, aerr.Error())
+					case sts.ErrCodeIDPRejectedClaimException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeIDPRejectedClaimException, aerr.Error())
+					case sts.ErrCodeIDPCommunicationErrorException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeIDPCommunicationErrorException, aerr.Error())
+					case sts.ErrCodeInvalidIdentityTokenException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeInvalidIdentityTokenException, aerr.Error())
+					case sts.ErrCodeExpiredTokenException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeExpiredTokenException, aerr.Error())
+					case sts.ErrCodeRegionDisabledException:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", sts.ErrCodeRegionDisabledException, aerr.Error())
+					default:
+						Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", aerr.Error())
+					}
+				} else {
+					// Print the error, cast err to awserr.Error to get the Code and
+					// Message from an error.
+					Log.Error("s3sts::init 'AssumeRoleWithWebIdentity'", err.Error())
+				}
+				return nil, ErrAuthenticationFailed
+			}
+
+			credentials := result.Credentials
+			params["access_key_id"] = *credentials.AccessKeyId
+			params["secret_access_key"] = *credentials.SecretAccessKey
+			params["session_token"] = *credentials.SessionToken
+		} else {
+			Log.Debug("Get sts cred from user info")
+			var getWebTokenExpiry func() (*mcredentials.WebIdentityToken, error)
+			getWebTokenExpiry = func() (*mcredentials.WebIdentityToken, error) {
+				return &mcredentials.WebIdentityToken{
+					Token:       params["id_token"],
+					AccessToken: params["access_token"],
+				}, nil
+			}
+
+			sts, err := mcredentials.NewSTSWebIdentity(params["endpoint"], getWebTokenExpiry)
+			if err != nil {
+				Log.Error("Could not get STS credentials: %s", err)
+				return nil, ErrAuthenticationFailed
+			}
+
+			credentials, _ := sts.Get()
+			params["access_key_id"] = credentials.AccessKeyID
+			params["secret_access_key"] = credentials.SecretAccessKey
+			params["session_token"] = credentials.SessionToken
 		}
 
-		credentials := result.Credentials
-		params["access_key_id"] = *credentials.AccessKeyId
-		params["secret_access_key"] = *credentials.SecretAccessKey
-		params["session_token"] = *credentials.SessionToken
 		Log.Debug("s3sts - AssumeRoleWithWebIdentity ok")
 	}
 

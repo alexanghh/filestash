@@ -63,7 +63,7 @@ var openIDClientSecret = func() string {
 		}
 		f.Default = ""
 		f.Name = "client_secret"
-		f.Type = "text"
+		f.Type = "password"
 		f.Placeholder = "client_secret"
 		return f
 	}).String()
