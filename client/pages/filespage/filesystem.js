@@ -27,8 +27,7 @@ class FileSystemComponent extends React.PureComponent {
             <div className="component_filesystem">
                 <Container>
                     <div className="box">
-                        Total: {this.props.totalNumFiles} items {this.props.totalNumFiles === window.CONFIG["max_result_size"] && this.props.isSearch ? "(search limit) " : "" }
-                        | Showing: {this.props.files.length} items
+                        Total: {this.props.totalNumFiles} items {this.props.totalNumFiles === window.CONFIG["max_result_size"] && this.props.isSearch ? "[Results exceeded limit ("+window.CONFIG["max_result_size"]+" items) - Please refine your search criteria]" : ""}
                     </div>
                     <NewThing
                         path={this.props.path} sort={this.props.sort}
