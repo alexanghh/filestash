@@ -453,6 +453,7 @@ class SearchSnippet extends React.Component {
         this.onTogglePreview = this.onTogglePreview.bind(this);
         this.scrollParentToChild = this.scrollParentToChild.bind(this);
         this.checkSnippetLoaded = this.checkSnippetLoaded.bind(this);
+        this.onOpenContainingFolder = this.onOpenContainingFolder.bind(this);
     }
 
     componentDidMount() {
@@ -551,6 +552,20 @@ class SearchSnippet extends React.Component {
         }
     }
 
+    onOpenContainingFolder(e) {
+        if (e !== undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        const anchor = document.createElement('a');
+        anchor.href = '/files' + this.props.fullpath.substring(0, this.props.fullpath.lastIndexOf("/"));
+        anchor.target = '_blank'
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+    }
+
     render() {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
@@ -562,6 +577,10 @@ class SearchSnippet extends React.Component {
                                 name="info_dark"
                                 onClick={this.onTogglePreview}
                                 className="component_updater--icon"/>
+                            <Icon
+                                name="directory"
+                                onClick={this.onOpenContainingFolder}
+                                className="component_updater--icon" />
                         </NgIf>
                         <NgIf cond={this.state.preview_visible === true}>
                             <Icon
@@ -576,6 +595,10 @@ class SearchSnippet extends React.Component {
                                   name="close"
                                   onClick={this.onTogglePreview}
                                   className="component_updater--icon"/>
+                            <Icon
+                                name="directory"
+                                onClick={this.onOpenContainingFolder}
+                                className="component_updater--icon" />
                         </NgIf>
                     </div>
                 </div>
