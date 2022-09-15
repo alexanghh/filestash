@@ -335,6 +335,7 @@ class ExistingThingComponent extends React.Component {
                     </Card>
                 </ToggleableLink>
                 <SearchSnippet
+                    listId={this.props.file._id}
                     fullpath={this.props.file.path}
                     hits={this.props.file.hits}
                     snippet={this.props.file.snippet}

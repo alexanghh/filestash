@@ -175,6 +175,17 @@ export class FilesPageComponent extends React.Component {
             requestAnimationFrame(() => {
                 let files = sort(this.state.files, _sort);
                 if (same_sort && this.state.sort_reverse) files = files.reverse();
+                if (this.state.is_search) {
+                    files = files.map((file, index) => {
+                        if (file.type === "file") {
+                            file._id = index+1;
+                        }
+                        return file;
+                    });
+                };
+                this.setState({
+                    files: [],
+                });
                 this.setState({
                     page_number: PAGE_NUMBER_INIT,
                     sort_reverse: same_sort ? !this.state.sort_reverse : true,
@@ -222,7 +233,12 @@ export class FilesPageComponent extends React.Component {
         });
         this._search = onSearch(search, this.state.path, this.state.show_hidden).subscribe((f = []) => {
             this.setState({
-                files: sort(f, this.state.sort),
+                files: sort(f, this.state.sort).map((file, index) => {
+                    if (file.type === "file") {
+                        file._id = index+1;
+                    }
+                    return file;
+                }),
                 loading: false,
                 metadata: {
                     can_rename: false,
