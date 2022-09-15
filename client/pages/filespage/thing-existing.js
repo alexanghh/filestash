@@ -494,7 +494,12 @@ class SearchSnippet extends React.Component {
         parent.scrollTop += scrollTop - offset;
     }
 
-    onScrollPrevResult() {
+    onScrollPrevResult(e) {
+        if (e !== undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         if (this.props.snippet === undefined || this.props.snippet === "" || this.state.resultsRef.current === undefined || this.state.resultsRef.current === null)
             return
         const results = this.state.resultsRef.current.querySelectorAll("#search_result")
@@ -505,7 +510,12 @@ class SearchSnippet extends React.Component {
         this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
 
-    onScrollNextResult() {
+    onScrollNextResult(e) {
+        if (e !== undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         if (this.props.snippet === undefined || this.props.snippet === "" || this.state.resultsRef.current === undefined || this.state.resultsRef.current === null)
             return
         const results = this.state.resultsRef.current.querySelectorAll("#search_result")
@@ -518,7 +528,12 @@ class SearchSnippet extends React.Component {
         this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
 
-    onTogglePreview() {
+    onTogglePreview(e) {
+        if (e !== undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         if (this.props.snippet === undefined || this.props.snippet === "")
             return
         if (this.state.resultsRef.current.style.display === "none") {
@@ -539,7 +554,8 @@ class SearchSnippet extends React.Component {
     render() {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
-                <div ref={this.detailsRef} className="box fullpath">Fullpath: {this.props.fullpath} | Hits: {this.props.hits}
+                <div ref={this.detailsRef} className="box fullpath" onClick={this.onTogglePreview}>
+                    {this.props.listId} | Fullpath: {this.props.fullpath} | Hits: {this.props.hits}
                     <div className="component_action" >
                         <NgIf cond={this.state.preview_visible !== true}>
                             <Icon
