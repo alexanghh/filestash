@@ -297,6 +297,13 @@ class ExistingThingComponent extends React.Component {
 
         return connectDragSource(connectDropNativeFile(connectDropFile(
             <div className={"component_thing view-"+this.props.view+(this.props.selected === true ? " selected" : " not-selected")}>
+                <SearchSnippet
+                    listId={this.props.file._id}
+                    fullpath={this.props.file.path}
+                    hits={this.props.file.hits}
+                    snippet={this.props.file.snippet}
+                    onClickHighlight={this.onHighlightRequest.bind(this)}
+                />
                 <ToggleableLink
                     onClick={this.onThingClick.bind(this)}
                     to={fileLink + window.location.search}
@@ -334,13 +341,6 @@ class ExistingThingComponent extends React.Component {
                         <div className="selectionOverlay"></div>
                     </Card>
                 </ToggleableLink>
-                <SearchSnippet
-                    listId={this.props.file._id}
-                    fullpath={this.props.file.path}
-                    hits={this.props.file.hits}
-                    snippet={this.props.file.snippet}
-                    onClickHighlight={this.onHighlightRequest.bind(this)}
-                    />
             </div>,
         )));
     }
@@ -571,7 +571,9 @@ class SearchSnippet extends React.Component {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
                 <div ref={this.detailsRef} className="box fullpath" onClick={this.onTogglePreview}>
-                    {this.props.listId} | Fullpath: {this.props.fullpath} | Hits: {this.props.hits}
+                    <span className="search_id">{this.props.listId}</span>
+                    <span className="fullpath"> Fullpath: {this.props.fullpath}</span> |
+                    <span className="hits"> Hits: {this.props.hits}</span>
                     <div className="component_action" >
                         <NgIf cond={this.state.preview_visible !== true}>
                             <Icon
