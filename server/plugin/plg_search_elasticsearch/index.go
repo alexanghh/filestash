@@ -421,8 +421,11 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 				}
 			}
 		}
+
+		hits := int64(strings.Count(snippet, highlight_pre_tag))
 		if len(snippet) == 0 {
 			snippet = resPath
+			hits = 1
 		}
 
 		files = append(files, File{
@@ -432,7 +435,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			FTime:    time,
 			FPath:    resPath,
 			FSnippet: snippet,
-			FHits:    int64(strings.Count(snippet, highlight_pre_tag)),
+			FHits:    hits,
 		})
 	}
 	Log.Debug(strings.Repeat("=", 37))
