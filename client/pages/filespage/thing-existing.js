@@ -508,6 +508,10 @@ class SearchSnippet extends React.Component {
         if (results === undefined || results.length === 0)
             return // no search elements found
         const newScrollIndex = (this.state.scrollIndex - 1) < 0 ? (this.state.scrollIndex - 1) + results.length : (this.state.scrollIndex - 1)
+        // update to show current selection
+        if (results[this.state.scrollIndex] !== undefined)
+            results[this.state.scrollIndex].style.backgroundColor = "#FFFF00"
+        results[newScrollIndex].style.backgroundColor = "#9ad1ed"
         this.setState({scrollIndex: newScrollIndex})
         this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
@@ -526,6 +530,10 @@ class SearchSnippet extends React.Component {
         }
 
         const newScrollIndex = (this.state.scrollIndex + 1) % results.length
+        // update to show current selection
+        if (results[this.state.scrollIndex] !== undefined)
+            results[this.state.scrollIndex].style.backgroundColor = "#FFFF00"
+        results[newScrollIndex].style.backgroundColor = "#9ad1ed"
         this.setState({scrollIndex: newScrollIndex})
         this.scrollParentToChild(this.state.resultsRef.current, results[newScrollIndex])
     }
