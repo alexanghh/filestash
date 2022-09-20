@@ -28,7 +28,7 @@ class SubmenuComponent extends React.Component {
                 });
                 if (this.$input.current) this.$input.current.blur();
                 this.props.onSearch(null);
-            } else if (e.ctrlKey && e.keyCode === 70) { // 'Ctrl F' shortcut to search
+            } else if (e.ctrlKey && e.shiftKey && e.keyCode === 70) { // 'Ctrl F' shortcut to search
                 e.preventDefault();
                 this.setState({
                     search_input_visible: true,
