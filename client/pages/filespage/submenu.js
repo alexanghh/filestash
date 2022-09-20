@@ -166,33 +166,33 @@ class SubmenuComponent extends React.Component {
                             <DropdownList>
                                 <DropdownItem
                                     name="type"
-                                    icon={this.props.sort === "type" ? "check" : null}>
+                                    icon={this.props.sort === "type" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
                                     { t("Sort By Type") }
                                 </DropdownItem>
                                 <DropdownItem
                                     name="date"
-                                    icon={this.props.sort === "date" ? "check" : null}>
+                                    icon={this.props.sort === "date" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
                                     { t("Sort By Date") }
                                 </DropdownItem>
                                 <DropdownItem
                                     name="name"
-                                    icon={this.props.sort === "name" ? "check" : null}>
+                                    icon={this.props.sort === "name" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
                                     { t("Sort By Name") }
                                 </DropdownItem>
                                 <DropdownItem
                                     name="path"
-                                    icon={this.props.sort === "path" ? "check" : null}>
+                                    icon={this.props.sort === "path" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
                                     { t("Sort By Path") }
                                 </DropdownItem>
                                 <DropdownItem
                                     name="size"
-                                    icon={this.props.sort === "size" ? "check" : null}>
+                                    icon={this.props.sort === "size" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
                                     { t("Sort By Size") }
                                 </DropdownItem>
                                 <DropdownItem
                                     name="hits"
-                                    icon={this.props.sort === "hits" ? "check" : null}>
-                                    { t("Sort By Hits (Search)") }
+                                    icon={this.props.sort === "hits" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
+                                    { t("Sort By Search Hits") }
                                 </DropdownItem>
                             </DropdownList>
                         </Dropdown>

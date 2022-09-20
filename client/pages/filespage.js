@@ -317,6 +317,7 @@ export class FilesPageComponent extends React.Component {
                                     <Submenu
                                         path={this.state.path}
                                         sort={this.state.sort}
+                                        sort_reverse={this.state.sort_reverse}
                                         view={this.state.view}
                                         onSearch={this.onSearch.bind(this)}
                                         onViewUpdate={(value) => this.onView(value)}
