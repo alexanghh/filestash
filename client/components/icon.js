@@ -21,6 +21,8 @@ import img_arrow_right from "../assets/img/arrow_right.svg";
 import img_arrow_right_white from "../assets/img/arrow_right_white.svg";
 import img_arrow_left_white from "../assets/img/arrow_left_white.svg";
 import img_arrow_left from "../assets/img/arrow_left.svg";
+import img_angles_left from "../assets/img/angles-left.svg";
+import img_angles_right from "../assets/img/angles-right.svg";
 import img_arrow_top from "../assets/img/arrow_top.svg";
 import img_arrow_bottom from "../assets/img/arrow_bottom.svg";
 import img_more from "../assets/img/more.svg";
@@ -29,6 +31,8 @@ import img_close_dark from "../assets/img/close_dark.svg";
 import img_arrow_down from "../assets/img/arrow-down.svg";
 import img_arrow_up_double from "../assets/img/arrow-up-double.svg";
 import img_arrow_down_double from "../assets/img/arrow-down-double.svg";
+import img_arrow_up_short_wide from "../assets/img/arrow-up-short-wide.svg";
+import img_arrow_down_short_wide from "../assets/img/arrow-down-wide-short.svg";
 import img_search from "../assets/img/search.svg";
 import img_search_dark from "../assets/img/search_dark.svg";
 import img_grid from "../assets/img/grid.svg";
@@ -100,6 +104,10 @@ export const Icon = (props) => {
         img = img_arrow_left_white;
     } else if (props.name === "arrow_left") {
         img = img_arrow_left;
+    } else if (props.name === "angles_left") {
+        img = img_angles_left;
+    } else if (props.name === "angles_right") {
+        img = img_angles_right;
     } else if (props.name === "more") {
         img = img_more;
     } else if (props.name === "close") {
@@ -110,6 +118,10 @@ export const Icon = (props) => {
         img = img_arrow_up_double;
     } else if (props.name === "arrow_down_double") {
         img = img_arrow_down_double;
+    } else if (props.name === "arrow_up_short_wide") {
+        img = img_arrow_up_short_wide;
+    } else if (props.name === "arrow_down_short_wide") {
+        img = img_arrow_down_short_wide;
     } else if (props.name === "arrow_down") {
         img = img_arrow_down;
     } else if (props.name === "search") {
