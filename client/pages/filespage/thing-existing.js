@@ -455,6 +455,19 @@ class SearchSnippet extends React.Component {
         this.scrollParentToChild = this.scrollParentToChild.bind(this);
         this.checkSnippetLoaded = this.checkSnippetLoaded.bind(this);
         this.onOpenContainingFolder = this.onOpenContainingFolder.bind(this);
+
+        this._onKeyPress = (e) => {
+            // check if current snippet is selected
+            if (this.state.detailsRef.current.className === "box fullpath_highlighted") {
+                // next
+                if (e.ctrlKey && e.keyCode === 39) {
+                    this.onScrollNextResult()
+                }
+                else if (e.ctrlKey && e.keyCode === 37) {
+                    this.onScrollPrevResult()
+                }
+            }
+        }
     }
 
     componentDidMount() {
@@ -468,11 +481,13 @@ class SearchSnippet extends React.Component {
             attributes: true,
             characterData: true
         });
+        window.addEventListener("keydown", this._onKeyPress);
     }
 
     componentWillUnmount() {
         if(this.observer !== undefined && this.observer !== null)
             this.observer.disconnect();
+        window.removeEventListener("keydown", this._onKeyPress);
     }
 
     checkSnippetLoaded() {
@@ -595,11 +610,11 @@ class SearchSnippet extends React.Component {
                         </NgIf>
                         <NgIf cond={this.state.preview_visible === true}>
                             <Icon
-                                name="arrow_left"
+                                name="angles_left"
                                 onClick={this.onScrollPrevResult}
                                 className="component_updater--icon"/>
                             <Icon
-                                name="arrow_right"
+                                name="angles_right"
                                 onClick={this.onScrollNextResult}
                                 className="component_updater--icon"/>
                             <Icon ref={this.showRef}
