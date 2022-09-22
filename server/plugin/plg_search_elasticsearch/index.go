@@ -210,6 +210,17 @@ func init() {
 		f.Placeholder = "Eg: 1000"
 		return f
 	})
+	Config.Get("features.elasticsearch.enable_display_result_title").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "enable_display_result_title"
+		f.Name = "enable_display_result_title"
+		f.Type = "boolean"
+		f.Description = "Enable displaying of first 200 characters from snippet as title"
+		f.Default = true
+		return f
+	})
 	Config.Get("features.elasticsearch.enable_root_search").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
