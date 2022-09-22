@@ -228,7 +228,7 @@ func init() {
 		f.Id = "enable_root_search"
 		f.Name = "enable_root_search"
 		f.Type = "boolean"
-		f.Description = "Enable searching from root level (could potentially bypass access control restrictions)"
+		f.Description = "Enable searching from root level"
 		f.Default = false
 		return f
 	})
@@ -325,10 +325,22 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	)
 
 	// check path valid and user has list permission
-	_, err := app.Backend.Ls(path)
+	pathChildren, err := app.Backend.Ls(path)
 	if err != nil {
 		Log.Error("ES::query Error accessing search path: %s", err)
 		return nil, err
+	}
+
+	indexes := []string{}
+	if len(strings.TrimSpace(this.Index)) > 0 {
+		indexes = append(indexes, this.Index)
+	} else if path == "*" {
+		for i := range pathChildren {
+			if pathChildren[i].IsDir() {
+				indexes = append(indexes, pathChildren[i].Name())
+			}
+		}
+		Log.Debug("ES::query root search indexes: %s", strings.Join(indexes, ","))
 	}
 
 	// Build the request body.
@@ -360,16 +372,15 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		return nil, ErrNotFound
 	}
 
-	index := this.Index
-	if len(strings.TrimSpace(index)) == 0 {
+	if len(indexes) == 0 {
 		// extract index from path (bucket level index)
-		index = strings.ToLower(strings.Split(path, "/")[1])
+		indexes = append(indexes, strings.ToLower(strings.Split(path, "/")[1]))
 	}
 
 	// Perform the search request.
 	res, err := this.Es7.Search(
 		this.Es7.Search.WithContext(context.Background()),
-		this.Es7.Search.WithIndex(index),
+		this.Es7.Search.WithIndex(indexes...),
 		this.Es7.Search.WithBody(&buf),
 		this.Es7.Search.WithTrackTotalHits(true),
 		this.Es7.Search.WithPretty(),
