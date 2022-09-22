@@ -151,10 +151,12 @@ func OAuth2Authenticate(code string) (*oauth2.Token, error) {
 	token, err := OpenID().Exchange(context.Background(), code)
 	if err != nil {
 		Log.Warning("oauth2::error - couldn't exchange code for token: %+v", err)
+		Log.Debug("oauth2::error - code: %s", code)
 		return nil, ErrNotValid
 	}
 	if token.Valid() == false {
 		Log.Warning("oauth2::error - token is not valid")
+		Log.Debug("oauth2::error - code: %s, token %+v", code, token)
 		return nil, ErrNotValid
 	}
 	return token, nil
@@ -167,6 +169,7 @@ func OAuth2RefreshToken(token *oauth2.Token) (*oauth2.Token, error) {
 		updatedToken, err := OpenID().TokenSource(context.TODO(), token).Token()
 		if err != nil {
 			Log.Error("oauth2::OAuth2RefreshToken %+v", err)
+			Log.Debug("oauth2::OAuth2RefreshToken - token %+v", token)
 			return nil, ErrAuthenticationFailed
 		}
 		token = updatedToken

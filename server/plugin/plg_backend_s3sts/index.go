@@ -58,6 +58,7 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 		token, err := OAuth2Authenticate(params["code"])
 		if err != nil {
 			Log.Error("s3sts::init 'OAuth2Authenticate' %+v", err)
+			Log.Debug("s3sts::init 'OAuth2Authenticate' code: %s", params["code"])
 			return nil, ErrAuthenticationFailed
 		}
 		params["code"] = ""
@@ -74,6 +75,7 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			token, err := OAuth2RefreshToken(refreshToken)
 			if err != nil {
 				Log.Warning("s3sts::init 'OAuth2Refresh' %+v", err)
+				Log.Debug("s3sts::init 'OAuth2Refresh' refreshToken %s", refreshToken)
 			} else {
 				params["id_token"] = token.Extra("id_token").(string)
 				params["access_token"] = token.AccessToken
@@ -87,6 +89,7 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 		Log.Debug("s3sts - AssumeRoleWithWebIdentityInput")
 		if err := OpenIDVerifyToken(params["id_token"]); err != nil {
 			Log.Error("s3sts::init 'OpenIDVerifyToken'", err.Error())
+			Log.Debug("s3sts::init 'OpenIDVerifyToken' id_token: %s", params["id_token"])
 			return nil, ErrAuthenticationFailed
 		}
 
@@ -153,6 +156,7 @@ func (this S3STSBackend) Init(params map[string]string, app *App) (IBackend, err
 			sts, err := mcredentials.NewSTSWebIdentity(params["endpoint"], getWebTokenExpiry)
 			if err != nil {
 				Log.Error("Could not get STS credentials: %s", err)
+				Log.Debug("Could not get STS credentials - webtoken: %+v", getWebTokenExpiry)
 				return nil, ErrAuthenticationFailed
 			}
 
