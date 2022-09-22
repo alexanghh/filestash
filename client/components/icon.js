@@ -166,6 +166,8 @@ export const Icon = (props) => {
             style={props.style}
             onClick={props.onClick}
             src={img}
-            alt={props.name}/>
+            alt={props.name}
+            title={props.title || ""} />
+
     );
 };

@@ -303,44 +303,49 @@ class ExistingThingComponent extends React.Component {
                     hits={this.props.file.hits}
                     snippet={this.props.file.snippet}
                     onClickHighlight={this.onHighlightRequest.bind(this)}
+                    can_download={window.CONFIG.enable_inline_download === true}
+                    onClickDownload={this.onDownloadRequest.bind(this)}
+                    show_title={window.CONFIG.enable_search_title === true}
                 />
-                <ToggleableLink
-                    onClick={this.onThingClick.bind(this)}
-                    to={fileLink + window.location.search}
-                    disabled={this.props.file.icon === "loading"}>
-                    <Card
-                        className={className + " " + this.state.hover}>
-                        <Image
-                            preview={this.state.preview}
-                            icon={this.props.file.icon || this.props.file.type}
-                            view={this.props.view}
-                            path={path.join(this.props.path, this.props.file.name)}
-                            hide_extension={this.props.metadata.hide_extension} />
-                        <Filename
-                            filename={this.props.file.name}
-                            filesize={this.props.file.size}
-                            filetype={this.props.file.type}
-                            filesnippet={this.props.file.snippet}
-                            hide_extension={this.props.metadata.hide_extension}
-                            onRename={this.onRename.bind(this)}
-                            is_renaming={this.state.is_renaming}
-                            onRenameCancel={this.onRenameRequest.bind(this, false)} />
-                        <DateTime
-                            show={this.state.icon !== "loading"}
-                            timestamp={this.props.file.time} />
-                        <ActionButton
-                            onClickDownload={this.onDownloadRequest.bind(this)}
-                            onClickRename={this.onRenameRequest.bind(this)}
-                            onClickDelete={this.onDeleteRequest.bind(this)}
-                            onClickShare={this.onShareRequest.bind(this)}
-                            can_download={window.CONFIG.enable_inline_download === true}
-                            is_renaming={this.state.is_renaming}
-                            can_rename={this.props.metadata.can_rename !== false}
-                            can_delete={this.props.metadata.can_delete !== false}
-                            can_share={this.props.metadata.can_share !== false && window.CONFIG.enable_share === true} />
-                        <div className="selectionOverlay"></div>
-                    </Card>
-                </ToggleableLink>
+                <NgIf cond={this.props.file.snippet === undefined} type="inline">
+                    <ToggleableLink
+                        onClick={this.onThingClick.bind(this)}
+                        to={fileLink + window.location.search}
+                        disabled={this.props.file.icon === "loading"}>
+                        <Card
+                            className={className + " " + this.state.hover}>
+                            <Image
+                                preview={this.state.preview}
+                                icon={this.props.file.icon || this.props.file.type}
+                                view={this.props.view}
+                                path={path.join(this.props.path, this.props.file.name)}
+                                hide_extension={this.props.metadata.hide_extension} />
+                            <Filename
+                                filename={this.props.file.name}
+                                filesize={this.props.file.size}
+                                filetype={this.props.file.type}
+                                filesnippet={this.props.file.snippet}
+                                hide_extension={this.props.metadata.hide_extension}
+                                onRename={this.onRename.bind(this)}
+                                is_renaming={this.state.is_renaming}
+                                onRenameCancel={this.onRenameRequest.bind(this, false)} />
+                            <DateTime
+                                show={this.state.icon !== "loading"}
+                                timestamp={this.props.file.time} />
+                            <ActionButton
+                                onClickDownload={this.onDownloadRequest.bind(this)}
+                                onClickRename={this.onRenameRequest.bind(this)}
+                                onClickDelete={this.onDeleteRequest.bind(this)}
+                                onClickShare={this.onShareRequest.bind(this)}
+                                can_download={window.CONFIG.enable_inline_download === true}
+                                is_renaming={this.state.is_renaming}
+                                can_rename={this.props.metadata.can_rename !== false}
+                                can_delete={this.props.metadata.can_delete !== false}
+                                can_share={this.props.metadata.can_share !== false && window.CONFIG.enable_share === true} />
+                            <div className="selectionOverlay"></div>
+                        </Card>
+                    </ToggleableLink>
+                </NgIf>
             </div>,
         )));
     }
@@ -455,6 +460,8 @@ class SearchSnippet extends React.Component {
         this.scrollParentToChild = this.scrollParentToChild.bind(this);
         this.checkSnippetLoaded = this.checkSnippetLoaded.bind(this);
         this.onOpenContainingFolder = this.onOpenContainingFolder.bind(this);
+        this.onViewFile = this.onViewFile.bind(this);
+        this.onDownload = this.onDownload.bind(this);
 
         this._onKeyPress = (e) => {
             // check if current snippet is selected
@@ -590,43 +597,105 @@ class SearchSnippet extends React.Component {
         document.body.removeChild(anchor);
     }
 
+    onViewFile(e) {
+        if (e !== undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        const anchor = document.createElement('a');
+        anchor.href = '/view' + this.props.fullpath;
+        anchor.target = '_blank'
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+    }
+
+    onDownload(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.props.onClickDownload();
+    };
+
     render() {
         return (
             <NgIf cond={this.props.snippet !== undefined && this.props.snippet !== ""} type="inline">
                 <div ref={this.detailsRef} className="box fullpath" onClick={this.onTogglePreview}>
-                    <span className="search_id">{this.props.listId}</span>
-                    <span className="fullpath"> Fullpath: {this.props.fullpath}</span> |
-                    <span className="hits"> Hits: {this.props.hits}</span>
-                    <div className="component_action" >
-                        <NgIf cond={this.state.preview_visible !== true}>
-                            <Icon
-                                name="info_dark"
-                                onClick={this.onTogglePreview}
-                                className="component_updater--icon"/>
-                            <Icon
-                                name="directory"
-                                onClick={this.onOpenContainingFolder}
-                                className="component_updater--icon" />
-                        </NgIf>
-                        <NgIf cond={this.state.preview_visible === true}>
-                            <Icon
-                                name="angles_left"
-                                onClick={this.onScrollPrevResult}
-                                className="component_updater--icon"/>
-                            <Icon
-                                name="angles_right"
-                                onClick={this.onScrollNextResult}
-                                className="component_updater--icon"/>
-                            <Icon ref={this.showRef}
-                                  name="close"
-                                  onClick={this.onTogglePreview}
-                                  className="component_updater--icon"/>
-                            <Icon
-                                name="directory"
-                                onClick={this.onOpenContainingFolder}
-                                className="component_updater--icon" />
-                        </NgIf>
-                    </div>
+                    <span>
+                        <span className="search_id">{this.props.listId}</span>
+                        <span className="search_fullpath"> Fullpath: {this.props.fullpath}</span>
+                    </span>
+                    <NgIf type="inline"
+                        cond={this.props.show_title !== false}>
+                        <hr />
+                        <span className="search_title"> Title: {(this.props.snippet || "").replace( /(<([^>]+)>)/ig, '').replace(/\s\s+/g, ' ').substring(0,200)}</span>
+                    </NgIf>
+                    <span className="search_hits"> Hits: {this.props.hits}
+                        <div className="component_action" >
+                            <NgIf cond={this.state.preview_visible !== true}>
+                                <Icon
+                                    name="info_dark"
+                                    onClick={this.onTogglePreview}
+                                    className="component_updater--icon"
+                                    title="Open search preview" />
+                                <Icon
+                                    name="directory"
+                                    onClick={this.onOpenContainingFolder}
+                                    className="component_updater--icon"
+                                    title="Open containing folder in new tab" />
+                                <NgIf
+                                    type="inline"
+                                    cond={this.props.can_download !== false}>
+                                    <Icon
+                                        name="download"
+                                        onClick={this.onDownload}
+                                        className="component_updater--icon"
+                                        title="Download file" />
+                                </NgIf>
+                                <Icon
+                                    name="file"
+                                    onClick={this.onViewFile}
+                                    className="component_updater--icon"
+                                    title="Preview file in new tab" />
+                            </NgIf>
+                            <NgIf cond={this.state.preview_visible === true}>
+                                <Icon
+                                    name="angles_left"
+                                    onClick={this.onScrollPrevResult}
+                                    className="component_updater--icon"
+                                    title="Show previous hitword" />
+                                <Icon
+                                    name="angles_right"
+                                    onClick={this.onScrollNextResult}
+                                    className="component_updater--icon"
+                                    title="Show next hitword" />
+                                <Icon ref={this.showRef}
+                                    name="close"
+                                    onClick={this.onTogglePreview}
+                                    className="component_updater--icon"
+                                    title="Close search preview" />
+                                <Icon
+                                    name="directory"
+                                    onClick={this.onOpenContainingFolder}
+                                    className="component_updater--icon"
+                                    title="Open containing folder in new tab" />
+                                <NgIf
+                                    type="inline"
+                                    cond={this.props.can_download !== false}>
+                                    <Icon
+                                        name="download"
+                                        onClick={this.onDownload}
+                                        className="component_updater--icon"
+                                        title="Download file" />
+                                </NgIf>
+                                <Icon
+                                    name="file"
+                                    onClick={this.onViewFile}
+                                    className="component_updater--icon"
+                                    title="Preview file in new tab" />
+                            </NgIf>
+                        </div>
+                    </span>
                 </div>
                 <div ref={this.resultsRef}
                      className="box snippet"

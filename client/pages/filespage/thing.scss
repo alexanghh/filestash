@@ -309,3 +309,15 @@
     background-color: #8c8c8c;
     color: #fff;
 }
+
+.search_title {
+    width: calc(100% - 10px);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search_hits{
+    display: block;
+}
