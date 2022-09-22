@@ -171,7 +171,7 @@ class SubmenuComponent extends React.Component {
                                 </DropdownItem>
                                 <DropdownItem
                                     name="date"
-                                    icon={this.props.sort === "date" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
+                                    icon={this.props.sort === "date" ? (this.props.sort_reverse ? "arrow_down_short_wide" : "arrow_up_short_wide") : null}>
                                     { t("Sort By Date") }
                                 </DropdownItem>
                                 <DropdownItem
@@ -186,12 +186,12 @@ class SubmenuComponent extends React.Component {
                                 </DropdownItem>
                                 <DropdownItem
                                     name="size"
-                                    icon={this.props.sort === "size" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
+                                    icon={this.props.sort === "size" ? (this.props.sort_reverse ? "arrow_down_short_wide" : "arrow_up_short_wide") : null}>
                                     { t("Sort By Size") }
                                 </DropdownItem>
                                 <DropdownItem
                                     name="hits"
-                                    icon={this.props.sort === "hits" ? (this.props.sort_reverse ? "arrow_up_short_wide" : "arrow_down_short_wide") : null}>
+                                    icon={this.props.sort === "hits" ? (this.props.sort_reverse ? "arrow_down_short_wide" : "arrow_up_short_wide") : null}>
                                     { t("Sort By Search Hits") }
                                 </DropdownItem>
                             </DropdownList>
