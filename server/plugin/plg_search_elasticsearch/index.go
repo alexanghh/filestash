@@ -19,6 +19,8 @@ const highlight_post_tag = "</span>"
 type ElasticSearch struct {
 	Es7               *elasticsearch7.Client
 	Index             string
+	IndexPrefix       string
+	IndexSuffix       string
 	PathField         string
 	ContentField      string
 	SizeField         string
@@ -108,6 +110,30 @@ func init() {
 			f.Default = u
 			f.Placeholder = fmt.Sprintf("Default: '%s'", u)
 		}
+		return f
+	})
+	Config.Get("features.elasticsearch.index_prefix").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "index_prefix"
+		f.Name = "index_prefix"
+		f.Type = "text"
+		f.Description = "Prefix for Elasticsearch index."
+		f.Default = ""
+		f.Placeholder = "Eg: filestash_index_prefix"
+		return f
+	})
+	Config.Get("features.elasticsearch.index_suffix").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "index_suffix"
+		f.Name = "index_suffix"
+		f.Type = "text"
+		f.Description = "Suffix for Elasticsearch index."
+		f.Default = ""
+		f.Placeholder = "Eg: filestash_index_suffix"
 		return f
 	})
 	Config.Get("features.elasticsearch.field_path").Schema(func(f *FormElement) *FormElement {
@@ -299,6 +325,8 @@ func init() {
 	es := &ElasticSearch{
 		Es7:               es7,
 		Index:             Config.Get("features.elasticsearch.index").String(),
+		IndexPrefix:       Config.Get("features.elasticsearch.index_prefix").String(),
+		IndexSuffix:       Config.Get("features.elasticsearch.index_suffix").String(),
 		PathField:         Config.Get("features.elasticsearch.field_path").String(),
 		ContentField:      Config.Get("features.elasticsearch.field_content").String(),
 		SizeField:         Config.Get("features.elasticsearch.field_size").String(),
@@ -333,11 +361,11 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 
 	indexes := []string{}
 	if len(strings.TrimSpace(this.Index)) > 0 {
-		indexes = append(indexes, this.Index)
+		indexes = append(indexes, this.IndexPrefix+this.Index+this.IndexSuffix)
 	} else if path == "*" {
 		for i := range pathChildren {
 			if pathChildren[i].IsDir() {
-				indexes = append(indexes, pathChildren[i].Name())
+				indexes = append(indexes, this.IndexPrefix+pathChildren[i].Name()+this.IndexSuffix)
 			}
 		}
 		Log.Debug("ES::query root search indexes: %s", strings.Join(indexes, ","))
@@ -374,7 +402,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 
 	if len(indexes) == 0 {
 		// extract index from path (bucket level index)
-		indexes = append(indexes, strings.ToLower(strings.Split(path, "/")[1]))
+		indexes = append(indexes, this.IndexPrefix+strings.ToLower(strings.Split(path, "/")[1])+this.IndexSuffix)
 	}
 
 	// Perform the search request.
