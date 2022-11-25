@@ -25,7 +25,7 @@ func HealthHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 	// CHECK 1: open the config file
 	file, err := os.OpenFile(
 		filepath.Join(GetCurrentDir(), CONFIG_PATH, "config.json"),
-		os.O_RDWR, os.ModePerm,
+		os.O_RDONLY, os.ModePerm,
 	)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
@@ -41,12 +41,12 @@ func HealthHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// CHECK3: write onto the config file
-	if _, err := file.Write([]byte("")); err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte(`{"status": "error", "reason": "fs write error"}`))
-		return
-	}
+	//// CHECK3: write onto the config file
+	//if _, err := file.Write([]byte("")); err != nil {
+	//	res.WriteHeader(http.StatusInternalServerError)
+	//	res.Write([]byte(`{"status": "error", "reason": "fs write error"}`))
+	//	return
+	//}
 
 	// CHECK4: about page
 	r, err := http.Get(fmt.Sprintf(
