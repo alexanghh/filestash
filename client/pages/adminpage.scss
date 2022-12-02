@@ -47,6 +47,7 @@
                 @media screen and (max-width: 550px) {
                     display: block;
                     .nothing{ display: none; }
+                    input[type="checkbox"] { top: -7px; }
                 }
                 > span{
                     white-space: nowrap;
@@ -83,10 +84,43 @@
         }
         fieldset{
             background: white;
-            border-color: var(--bg-color);
+            border-color: rgba(0,0,0,0.05);
             border-style: solid;
             border-radius: 3px;
             margin: 15px 0;
+        }
+    }
+
+
+    .formbuilder > div > label {
+        display: block;
+        border-bottom: 2px dashed rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        padding-bottom: 5px;
+        margin-top: 15px;
+    }
+    .formbuilder {
+        .component_input, .component_textarea, .component_select {
+            background: rgba(0,0,0,0.05); border-bottom: 0;
+            border-radius: 3px;
+            padding-left: 5px;
+            &[readonly]{
+                background: var(--dark);
+                color: var(--light);
+            }
+            &:not([readonly]):hover, &:not([readonly])focus {
+                background: rgba(0,0,0,0.07);
+            }
+        }
+        .formbuilder_password {
+            img.component_icon {
+                background: rgba(0, 0, 0, 0.05);
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+                padding-right: 5px;
+                border: none;
+                height: 22px;
+            }
         }
     }
 }
@@ -119,6 +153,11 @@
             a.active, a:hover{
                 color: white;
             }
+            &.version {
+                position: absolute;
+                bottom:0;
+                opacity: 0.25;
+            }
         }
     }
     .header{
@@ -137,6 +176,7 @@
             @media screen and (max-width: 760px) { display: none; }
         }
     }
+
     @media screen and (max-width: 1000px) {
         padding-left: 30px; width: 200px;
         h2 {
@@ -150,6 +190,7 @@
             font-size: 1.25em;
             padding: 0;
         }
+        .version { display: none; }
     }
     @media screen and (max-width: 650px) {
         width: inherit;

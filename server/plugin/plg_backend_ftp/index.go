@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,6 +19,8 @@ var FtpCache AppCache
 
 type Ftp struct {
 	client *goftp.Client
+	p      map[string]string
+	wg     *sync.WaitGroup
 }
 
 func init() {
@@ -26,6 +29,16 @@ func init() {
 	FtpCache = NewAppCache(2, 1)
 	FtpCache.OnEvict(func(key string, value interface{}) {
 		c := value.(*Ftp)
+		if c == nil {
+			Log.Warning("plg_backend_ftp::ftp is nil on close")
+			return
+		} else if c.wg == nil {
+			Log.Warning("plg_backend_ftp::wg is nil on close")
+			c.Close()
+			return
+		}
+		c.wg.Wait()
+		Log.Debug("plg_backend_ftp::vacuum")
 		c.Close()
 	})
 }
@@ -33,6 +46,18 @@ func init() {
 func (f Ftp) Init(params map[string]string, app *App) (IBackend, error) {
 	if c := FtpCache.Get(params); c != nil {
 		d := c.(*Ftp)
+		if d == nil {
+			Log.Warning("plg_backend_ftp::sftp is nil on get")
+			return nil, ErrInternal
+		} else if d.wg == nil {
+			Log.Warning("plg_backend_ftp::wg is nil on get")
+			return nil, ErrInternal
+		}
+		d.wg.Add(1)
+		go func() {
+			<-app.Context.Done()
+			d.wg.Done()
+		}()
 		return d, nil
 	}
 	if params["hostname"] == "" {
@@ -55,43 +80,102 @@ func (f Ftp) Init(params map[string]string, app *App) (IBackend, error) {
 		}
 	}
 
-	configWithoutTLS := goftp.Config{
-		User:               params["username"],
-		Password:           params["password"],
-		ConnectionsPerHost: conn,
-		Timeout:            10 * time.Second,
+	connectStrategy := []string{"ftp", "ftps::implicit", "ftps::explicit"}
+	if strings.HasPrefix(params["hostname"], "ftp://") {
+		connectStrategy = []string{"ftp"}
+		params["hostname"] = strings.TrimPrefix(params["hostname"], "ftp://")
+	} else if strings.HasPrefix(params["hostname"], "ftps://") {
+		connectStrategy = []string{"ftps::implicit", "ftps::explicit"}
+		params["hostname"] = strings.TrimPrefix(params["hostname"], "ftps://")
 	}
-	configWithTLS := configWithoutTLS
-	configWithTLS.TLSConfig = &tls.Config{
-		InsecureSkipVerify: true,
-		ClientSessionCache: tls.NewLRUClientSessionCache(32),
-	}
-	configWithTLS.TLSMode = goftp.TLSExplicit
 
 	var backend *Ftp = nil
-
-	// Attempt to connect using FTPS
-	if client, err := goftp.DialConfig(configWithTLS, fmt.Sprintf("%s:%s", strings.TrimPrefix(params["hostname"], "ftps://"), params["port"])); err == nil {
-		if _, err := client.ReadDir("/"); err != nil {
+	hostname := fmt.Sprintf("%s:%s", params["hostname"], params["port"])
+	cfgBuilder := func(timeout time.Duration, withTLS bool) goftp.Config {
+		cfg := goftp.Config{
+			User:               params["username"],
+			Password:           params["password"],
+			ConnectionsPerHost: conn,
+			Timeout:            timeout * time.Second,
+		}
+		cfg.Timeout = timeout
+		if withTLS {
+			cfg.TLSConfig = &tls.Config{
+				InsecureSkipVerify:     true,
+				ClientSessionCache:     tls.NewLRUClientSessionCache(0),
+				SessionTicketsDisabled: false,
+				ServerName:             hostname,
+			}
+		}
+		return cfg
+	}
+	for i := 0; i < len(connectStrategy); i++ {
+		if connectStrategy[i] == "ftp" {
+			client, err := goftp.DialConfig(cfgBuilder(5*time.Second, false), hostname)
+			if err != nil {
+				Log.Debug("plg_backend_ftp::ftp dial %s", err.Error())
+				continue
+			} else if _, err := client.ReadDir("/"); err != nil {
+				client.Close()
+				Log.Debug("plg_backend_ftp::ftp verify %s", err.Error())
+				continue
+			}
 			client.Close()
-		} else {
-			backend = &Ftp{client}
+			client, err = goftp.DialConfig(cfgBuilder(60*time.Second, false), hostname)
+			if err != nil {
+				continue
+			}
+			params["mode"] = connectStrategy[i]
+			backend = &Ftp{client, params, nil}
+			break
+		} else if connectStrategy[i] == "ftps::implicit" {
+			cfg := cfgBuilder(60*time.Second, true)
+			cfg.TLSMode = goftp.TLSImplicit
+			client, err := goftp.DialConfig(cfg, hostname)
+			if err != nil {
+				Log.Debug("plg_backend_ftp::ftps::implicit dial %s", err.Error())
+				continue
+			} else if _, err := client.ReadDir("/"); err != nil {
+				Log.Debug("plg_backend_ftp::ftps::implicit verify %s", err.Error())
+				client.Close()
+				continue
+			}
+			params["mode"] = connectStrategy[i]
+			backend = &Ftp{client, params, nil}
+			break
+		} else if connectStrategy[i] == "ftps::explicit" {
+			cfg := cfgBuilder(5*time.Second, true)
+			cfg.TLSMode = goftp.TLSExplicit
+			client, err := goftp.DialConfig(cfg, hostname)
+			if err != nil {
+				Log.Debug("plg_backend_ftp::ftps::explicit dial '%s'", err.Error())
+				continue
+			} else if _, err := client.ReadDir("/"); err != nil {
+				Log.Debug("plg_backend_ftp::ftps::explicit verify %s", err.Error())
+				client.Close()
+				continue
+			}
+			client.Close()
+			cfg = cfgBuilder(60*time.Second, true)
+			cfg.TLSMode = goftp.TLSExplicit
+			client, err = goftp.DialConfig(cfg, hostname)
+			if err != nil {
+				continue
+			}
+			params["mode"] = connectStrategy[i]
+			backend = &Ftp{client, params, nil}
+			break
 		}
 	}
-
-	// Attempt to create an FTP connection if FTPS isn't available
 	if backend == nil {
-		client, err := goftp.DialConfig(configWithoutTLS, fmt.Sprintf("%s:%s", strings.TrimPrefix(params["hostname"], "ftp://"), params["port"]))
-		if err != nil {
-			return backend, err
-		}
-		if _, err := client.ReadDir("/"); err != nil {
-			client.Close()
-			return backend, ErrAuthenticationFailed
-		}
-		backend = &Ftp{client}
+		return nil, ErrAuthenticationFailed
 	}
-
+	backend.wg = new(sync.WaitGroup)
+	backend.wg.Add(1)
+	go func() {
+		<-app.Context.Done()
+		backend.wg.Done()
+	}()
 	FtpCache.Set(params, backend)
 	return backend, nil
 }

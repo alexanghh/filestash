@@ -80,13 +80,13 @@ func (this Get) Starter() []func(*mux.Router) {
  * - plg_authentication_ldap
  * - ...
  */
-var authentication_middleware map[string]IAuth = make(map[string]IAuth, 0)
+var authentication_middleware map[string]IAuthentication = make(map[string]IAuthentication, 0)
 
-func (this Register) AuthenticationMiddleware(id string, am IAuth) {
+func (this Register) AuthenticationMiddleware(id string, am IAuthentication) {
 	authentication_middleware[id] = am
 }
 
-func (this Get) AuthenticationMiddleware() map[string]IAuth {
+func (this Get) AuthenticationMiddleware() map[string]IAuthentication {
 	return authentication_middleware
 }
 
@@ -119,6 +119,19 @@ func (this Register) SearchEngine(s ISearch) {
 
 func (this Get) SearchEngine() ISearch {
 	return search
+}
+
+/*
+ * Pluggable Audit interface
+ */
+var audit IAuditPlugin
+
+func (this Register) AuditEngine(a IAuditPlugin) {
+	audit = a
+}
+
+func (this Get) AuditEngine() IAuditPlugin {
+	return audit
 }
 
 /*

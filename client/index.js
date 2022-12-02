@@ -3,17 +3,33 @@ import ReactDOM from "react-dom";
 import Router from "./router";
 
 import { Config, Log } from "./model/";
-import { http_get } from "./helpers/ajax";
+import { http_get, setup_cache } from "./helpers/";
 import load from "little-loader";
 
 import "./assets/css/reset.scss";
 
-window.addEventListener("DOMContentLoaded", () => {
-    const className = "ontouchstart" in window ? "touch-yes" : "touch-no";
-    document.body.classList.add(className);
+(function() {
+    Promise.all([
+        setup_dom(), setup_translation(), setup_xdg_open(), setup_cache(), Config.refresh(),
+    ]).then(() => {
+        const timeSinceBoot = new Date() - window.initTime;
+        if (window.CONFIG.name) document.title = window.CONFIG.name;
+        if (timeSinceBoot >= 1500) {
+            const timeoutToAvoidFlickering = timeSinceBoot > 2500 ? 0 : 500;
+            return waitFor(timeoutToAvoidFlickering)
+                .then(removeLoaderWithAnimation)
+                .then(render);
+        }
+        return removeLoader().then(render);
+    }).catch((err) => {
+        const msg = navigator.onLine === false ? "OFFLINE" : (err.message || "CAN'T LOAD");
+        Log.report(msg + " - " + (err && err.message), location.href);
+        return removeLoaderWithAnimation().then(() => {
+            $error(msg);
+        });
+    });
 
     const $loader = document.querySelector("#n-lder");
-
     function render() {
         ReactDOM.render(
             <Router/>,
@@ -39,24 +55,11 @@ window.addEventListener("DOMContentLoaded", () => {
         if ($loader) $loader.remove();
         return Promise.resolve();
     }
+}());
 
-    Promise.all([Config.refresh(), setup_xdg_open(), translation()]).then(() => {
-        const timeSinceBoot = new Date() - window.initTime;
-        if (window.CONFIG.name) document.title = window.CONFIG.name;
-        if (timeSinceBoot >= 1500) {
-            const timeoutToAvoidFlickering = timeSinceBoot > 2500 ? 0 : 500;
-            return waitFor(timeoutToAvoidFlickering)
-                .then(removeLoaderWithAnimation)
-                .then(render);
-        }
-        return removeLoader().then(render);
-    }).catch((e) => {
-        const msg = navigator.onLine === false ? "OFFLINE" : "CAN'T LOAD FILESTASH";
-        Log.report(msg + " - " + (e && e.message), location.href);
-        return removeLoaderWithAnimation().then(() => {
-            $error(msg);
-        });
-    });
+window.addEventListener("DOMContentLoaded", () => {
+    const className = "ontouchstart" in window ? "touch-yes" : "touch-no";
+    document.body.classList.add(className);
 });
 
 window.onerror = function(msg, url, lineNo, colNo, error) {
@@ -66,12 +69,19 @@ window.onerror = function(msg, url, lineNo, colNo, error) {
 
 function $error(msg) {
     const $code = document.createElement("code");
-    $code.style.textAlign = "center";
     $code.style.display = "block";
-    $code.style.margin = "50px 0";
+    $code.style.margin = "20px 0";
     $code.style.fontSize = "1.3rem";
+    $code.style.padding = "0 10% 0 10%";
     $code.textContent = msg;
+
+    let $img = document.createElement("img");
+    $img.setAttribute("src", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABQAQMAAADcLOLWAAAABlBMVEUAAABTU1OoaSf/AAAAAXRSTlMAQObYZgAAAFlJREFUeF69zrERgCAQBdElMqQEOtHSuNIohRIMjfjO6DDmB7jZy5YgySQVYDIakIHD1kBPC9Bra5G2Ans0N7iAcOLF+EHvXySpjSBWCDI/3nIdBDihr8m4AcKdbn96jpAHAAAAAElFTkSuQmCC");
+    $img.style.display = "block";
+    $img.style.padding = "20vh 10% 0 10%";
+
     document.body.innerHTML = "";
+    document.body.appendChild($img);
     document.body.appendChild($code);
 }
 
@@ -94,21 +104,34 @@ if ("serviceWorker" in navigator) {
 window.overrides = {};
 function setup_xdg_open() {
     return new Promise((done, err) => {
-        load("/overrides/xdg-open.js", function(error) {
-            if (error) return err(error);
-            done();
-        });
+        load("/overrides/xdg-open.js", () => done());
     });
 }
 
-function translation() {
-    const userLanguage = navigator.language.split("-")[0];
-    const selectedLanguage = [
-        "az", "be", "bg", "ca", "cs", "da", "de", "el", "es", "et",
-        "eu", "fi", "fr", "gl", "hr", "hu", "id", "is", "it", "ja",
-        "ka", "ko", "lt", "lv", "mn", "nb", "nl", "pl", "pt", "ro",
-        "ru", "sk", "sl", "sr", "sv", "th", "tr", "uk", "vi", "zh",
-    ].indexOf(userLanguage) === -1 ? "en" : userLanguage;
+function setup_dom() {
+    return new Promise((done) => {
+        window.addEventListener("DOMContentLoaded", () => done())
+    });
+}
+
+function setup_translation() {
+    let selectedLanguage = "en";
+    switch(navigator.language) {
+    case "zh-TW":
+        selectedLanguage = "zh_tw";
+        break;
+    default:
+        const userLanguage = navigator.language.split("-")[0];
+        const idx = [
+            "az", "be", "bg", "ca", "cs", "da", "de", "el", "es", "et",
+            "eu", "fi", "fr", "gl", "hr", "hu", "id", "is", "it", "ja",
+            "ka", "ko", "lt", "lv", "mn", "nb", "nl", "pl", "pt", "ro",
+            "ru", "sk", "sl", "sr", "sv", "th", "tr", "uk", "vi", "zh",
+        ].indexOf(navigator.language.split("-")[0]);
+        if(idx !== -1) {
+            selectedLanguage = userLanguage;
+        }
+    }
 
     if (selectedLanguage === "en") {
         return Promise.resolve();

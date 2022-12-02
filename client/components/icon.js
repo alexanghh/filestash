@@ -47,6 +47,7 @@ import img_location from "../assets/img/location.svg";
 import img_stop from "../assets/img/stop.svg";
 import img_refresh from "../assets/img/refresh.svg";
 import img_copy from "../assets/img/copy.svg";
+import img_eye from "../assets/img/eye.svg";
 export const img_placeholder = "/assets/icons/placeholder.png";
 
 export const Icon = (props) => {
@@ -156,12 +157,15 @@ export const Icon = (props) => {
         img = "/assets/icons/empty_folder.svg";
     } else if (props.name === "empty_search") {
         img = "/assets/icons/empty_search.svg";
+    } else if (props.name === "eye") {
+        img = img_eye;
     } else {
         throw (new Error(`unknown icon: "${props.name}"`));
     }
 
     return (
         <img className="component_icon"
+            draggable={false}
             onError={() => Log.send(`cannot load icon ${props.name}`)}
             style={props.style}
             onClick={props.onClick}
