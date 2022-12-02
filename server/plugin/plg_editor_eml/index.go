@@ -50,8 +50,8 @@ func init() {
     `)
 }
 
-func ContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
-	if model.CanRead(&ctx) == false {
+func ContentHandler(ctx *App, res http.ResponseWriter, req *http.Request) {
+	if model.CanRead(ctx) == false {
 		SendErrorResult(res, ErrPermissionDenied)
 		return
 	}

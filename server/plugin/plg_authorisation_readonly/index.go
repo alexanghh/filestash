@@ -24,30 +24,30 @@ func init() {
 
 type AuthM struct{}
 
-func (this AuthM) Ls(ctx App, path string) error {
+func (this AuthM) Ls(ctx *App, path string) error {
 	return nil
 }
 
-func (this AuthM) Cat(ctx App, path string) error {
+func (this AuthM) Cat(ctx *App, path string) error {
 	return nil
 }
 
-func (this AuthM) Mkdir(ctx App, path string) error {
+func (this AuthM) Mkdir(ctx *App, path string) error {
 	return ErrNotAllowed
 }
 
-func (this AuthM) Rm(ctx App, path string) error {
+func (this AuthM) Rm(ctx *App, path string) error {
 	return ErrNotAllowed
 }
 
-func (this AuthM) Mv(ctx App, from string, to string) error {
+func (this AuthM) Mv(ctx *App, from string, to string) error {
 	return ErrNotAllowed
 }
 
-func (this AuthM) Save(ctx App, path string) error {
+func (this AuthM) Save(ctx *App, path string) error {
 	return ErrNotAllowed
 }
 
-func (this AuthM) Touch(ctx App, path string) error {
+func (this AuthM) Touch(ctx *App, path string) error {
 	return ErrNotAllowed
 }
