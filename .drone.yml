@@ -26,11 +26,10 @@ steps:
   - apk add make git > /dev/null
   - npm install --silent
   - make build_frontend
-  - cp -R ./dist/data/public ./filestash/data/public
 
 - name: build_backend
   image: golang:1.16-stretch
-  depends_on: [ build_prepare ]
+  depends_on: [ build_prepare, build_frontend ]
   environment:
     CGO_LDFLAGS_ALLOW: "-fopenmp"
     GO111MODULE: "on"
@@ -73,9 +72,7 @@ steps:
   - sed -i '/plg_image_light/d' server/plugin/index.go
   - go generate ./test/unit_go/...
   - echo "==== UNIT TEST ====="
-  - go test -mod=vendor --tags "fts5" -count=1 $(go list ./server/... | grep -v "server/plugin")
-  - echo "==== BENCHMARK ====="
-  - go test -mod=vendor --tags "fts5" -bench=. -run=^a -count=1 -v $(go list ./server/... | grep -v "server/plugin")
+  - go test -mod=vendor --tags "fts5" -count=1 $(go list ./server/... | grep -v "server/plugin" | grep -v "server/generator")
 
 - name: test_e2e
   image: machines/puppeteer

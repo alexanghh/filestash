@@ -92,9 +92,6 @@ func (git Git) Init(params map[string]string, app *App) (IBackend, error) {
 	if p.committerEmail == "" {
 		p.committerEmail = "https://filestash.app"
 	}
-	if len(params["password"]) > 2700 {
-		return nil, NewError("Your password doesn't fit in a cookie :/", 500)
-	}
 
 	hash := GenerateID(app)
 	p.basePath = GetAbsolutePath(GitCachePath + "repo_" + hash + "/")
@@ -199,7 +196,7 @@ func (g Git) Ls(path string) ([]os.FileInfo, error) {
 	if err != nil {
 		return nil, NewError(err.Error(), 403)
 	}
-	file, err := os.Open(p)
+	file, err := SafeOsOpenFile(p, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +208,7 @@ func (g Git) Cat(path string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, NewError(err.Error(), 403)
 	}
-	return os.Open(p)
+	return SafeOsOpenFile(p, os.O_RDONLY, os.ModePerm)
 }
 
 func (g Git) Mkdir(path string) error {
@@ -219,7 +216,7 @@ func (g Git) Mkdir(path string) error {
 	if err != nil {
 		return NewError(err.Error(), 403)
 	}
-	return os.Mkdir(p, os.ModePerm)
+	return SafeOsMkdir(p, os.ModePerm)
 }
 
 func (g Git) Rm(path string) error {
@@ -227,7 +224,7 @@ func (g Git) Rm(path string) error {
 	if err != nil {
 		return NewError(err.Error(), 403)
 	}
-	if err = os.RemoveAll(p); err != nil {
+	if err = SafeOsRemoveAll(p); err != nil {
 		return NewError(err.Error(), 403)
 	}
 	message := g.git.message("delete", path)
@@ -247,7 +244,7 @@ func (g Git) Mv(from string, to string) error {
 		return NewError(err.Error(), 403)
 	}
 
-	if err = os.Rename(fpath, tpath); err != nil {
+	if err = SafeOsRename(fpath, tpath); err != nil {
 		return NewError(err.Error(), 403)
 	}
 	message := g.git.message("move", from)
@@ -262,7 +259,7 @@ func (g Git) Touch(path string) error {
 	if err != nil {
 		return NewError(err.Error(), 403)
 	}
-	file, err := os.Create(p)
+	file, err := SafeOsOpenFile(p, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		return NewError(err.Error(), 403)
 	}
@@ -281,7 +278,7 @@ func (g Git) Save(path string, file io.Reader) error {
 		return NewError(err.Error(), 403)
 	}
 
-	fo, err := os.Create(p)
+	fo, err := SafeOsOpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -301,14 +298,14 @@ func (g Git) Close() error {
 
 func (g Git) path(path string) (string, error) {
 	if path == "" {
-		return "", NewError("No path available", 400)
+		return "", ErrNotValid
 	}
 	basePath := filepath.Join(g.git.params.basePath, path)
 	if string(path[len(path)-1]) == "/" {
 		basePath += "/"
 	}
 	if strings.HasPrefix(basePath, g.git.params.basePath) == false {
-		return "", NewError("There's nothing here", 403)
+		return "", ErrNotFound
 	}
 	return basePath, nil
 }

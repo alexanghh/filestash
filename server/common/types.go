@@ -20,20 +20,20 @@ type IBackend interface {
 	LoginForm() Form
 }
 
-type IAuth interface {
+type IAuthentication interface {
 	Setup() Form
 	EntryPoint(idpParams map[string]string, req *http.Request, res http.ResponseWriter) error
 	Callback(formData map[string]string, idpParams map[string]string, res http.ResponseWriter) (map[string]string, error)
 }
 
 type IAuthorisation interface {
-	Ls(ctx App, path string) error
-	Cat(ctx App, path string) error
-	Mkdir(ctx App, path string) error
-	Rm(ctx App, path string) error
-	Mv(ctx App, from string, to string) error
-	Save(ctx App, path string) error
-	Touch(ctx App, path string) error
+	Ls(ctx *App, path string) error
+	Cat(ctx *App, path string) error
+	Mkdir(ctx *App, path string) error
+	Rm(ctx *App, path string) error
+	Mv(ctx *App, from string, to string) error
+	Save(ctx *App, path string) error
+	Touch(ctx *App, path string) error
 }
 
 type IFile interface {
@@ -45,6 +45,23 @@ type IFile interface {
 
 type ISearch interface {
 	Query(ctx App, basePath string, term string) ([]IFile, error)
+}
+
+type ILogger interface {
+	Debug(format string, v ...interface{})
+	Info(format string, v ...interface{})
+	Warning(format string, v ...interface{})
+	Error(format string, v ...interface{})
+	Stdout(format string, v ...interface{})
+	SetVisibility(str string)
+}
+
+type IAuditPlugin interface {
+	Query(ctx *App, searchParams map[string]string) (AuditQueryResult, error)
+}
+type AuditQueryResult struct {
+	Form       *Form  `json:"form"`
+	RenderHTML string `json:"render"`
 }
 
 type File struct {

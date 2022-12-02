@@ -5,7 +5,7 @@ import { SelectableGroup } from "react-selectable";
 
 import "./filespage.scss";
 import "./error.scss";
-import { Files } from "../model/";
+import { Files, Tags } from "../model/";
 import {
     sort, onCreate, onRename, onMultiRename, onDelete, onMultiDelete,
     onDownload, onMultiDownload, onUpload, onSearch,
@@ -42,8 +42,9 @@ export class FilesPageComponent extends React.Component {
             is_search: false,
             files: [],
             selected: [],
-            metadata: null,
+            permissions: null,
             frequents: null,
+            tags: null,
             page_number: PAGE_NUMBER_INIT,
             loading: true,
             highlighted: null,
@@ -60,7 +61,7 @@ export class FilesPageComponent extends React.Component {
         // subscriptions
         this.props.subscribe("file.create", function() {
             return onCreate.apply(this, arguments).then(() => {
-                if (this.state.metadata && this.state.metadata.refresh_on_create === true) {
+                if (this.state.permissions && this.state.permissions.refresh_on_create === true) {
                     this.onRefresh(this.state.path, "directory");
                 }
                 return Promise.resolve();
@@ -134,7 +135,7 @@ export class FilesPageComponent extends React.Component {
                 return;
             }
             this.setState({
-                metadata: res.metadata,
+                permissions: res.permissions,
                 files: sort(res.results, this.state.sort),
                 selected: [],
                 loading: false,
@@ -153,7 +154,10 @@ export class FilesPageComponent extends React.Component {
         }, (error) => this.props.error(error));
         this.observers.push(observer);
         if (path === "/") {
-            Files.frequents().then((s) => this.setState({ frequents: s }));
+            Promise.all([Files.frequents(), Tags.all()])
+                .then(([s, t]) => {
+                    this.setState({ frequents: s, tags: t });
+                });
         }
     }
 
@@ -240,7 +244,7 @@ export class FilesPageComponent extends React.Component {
                     return file;
                 }),
                 loading: false,
-                metadata: {
+                permissions: {
                     can_rename: false,
                     can_delete: false,
                     can_share: false,
@@ -249,7 +253,7 @@ export class FilesPageComponent extends React.Component {
         }, (err) => {
             this.setState({
                 loading: false,
-                metadata: {
+                permissions: {
                     can_rename: false,
                     can_delete: false,
                     can_share: false,
@@ -299,7 +303,7 @@ export class FilesPageComponent extends React.Component {
         return (
             <div className="component_page_filespage">
                 <BreadCrumb className="breadcrumb" path={this.state.path} currentSelection={this.state.selected} />
-                <SelectableGroup onSelection={this.handleMultiSelect.bind(this)} tolerance={2} onNonItemClick={this.handleMultiSelect.bind(this, [])} preventDefault={true} enabled={this.state.is_search === false} className="selectablegroup">
+                <SelectableGroup onSelection={this.handleMultiSelect.bind(this)} tolerance={2} onNonItemClick={this.handleMultiSelect.bind(this, [])} preventDefault={true} enabled={this.state.is_search === false && this.state.files.length > 0} className="selectablegroup">
                     <div className="page_container">
                         <div ref={this.$scroll} className="scroll-y">
                             <InfiniteScroll
@@ -312,7 +316,7 @@ export class FilesPageComponent extends React.Component {
                                     className="container"
                                     cond={!!this.state.is_search || !this.state.loading}>
                                     <NgIf cond={this.state.path === "/" && window.self === window.top}>
-                                        <FrequentlyAccess files={this.state.frequents} />
+                                        <FrequentlyAccess tags={this.state.tags} files={this.state.frequents} />
                                     </NgIf>
                                     <Submenu
                                         path={this.state.path}
@@ -322,7 +326,7 @@ export class FilesPageComponent extends React.Component {
                                         onSearch={this.onSearch.bind(this)}
                                         onViewUpdate={(value) => this.onView(value)}
                                         onSortUpdate={(value) => this.onSort(value)}
-                                        accessRight={this.state.metadata || {}}
+                                        accessRight={this.state.permissions || {}}
                                         selected={this.state.selected} />
                                     <NgIf cond={!this.state.loading}>
                                         <FileSystem
@@ -331,7 +335,7 @@ export class FilesPageComponent extends React.Component {
                                             files={this.state.files.slice(0, this.state.page_number * LOAD_PER_SCROLL)}
                                             totalNumFiles={this.state.files.length}
                                             isSearch={this.state.is_search}
-                                            metadata={this.state.metadata || {}}
+                                            metadata={this.state.permissions || {}}
                                             onSort={this.onSort.bind(this)}
                                             onView={this.onView.bind(this)} />
                                     </NgIf>
@@ -340,7 +344,7 @@ export class FilesPageComponent extends React.Component {
                             <NgIf cond={this.state.loading === true}>
                                 <Loader/>
                             </NgIf>
-                            <MobileFileUpload path={this.state.path} accessRight={this.state.metadata || {}} />
+                            <MobileFileUpload path={this.state.path} accessRight={this.state.permissions || {}} />
                         </div>
                     </div>
                 </SelectableGroup>

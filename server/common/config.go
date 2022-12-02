@@ -21,7 +21,7 @@ type Configuration struct {
 	mu             sync.Mutex
 	currentElement *FormElement
 	cache          KeyValueStore
-	form           []Form
+	Form           []Form
 	Conn           []map[string]interface{}
 }
 
@@ -59,7 +59,7 @@ func NewConfiguration() Configuration {
 		onChange: make([]ChangeListener, 0),
 		mu:       sync.Mutex{},
 		cache:    NewKeyValueStore(),
-		form: []Form{
+		Form: []Form{
 			Form{
 				Title: "general",
 				Elmnts: []FormElement{
@@ -85,6 +85,13 @@ func NewConfiguration() Configuration {
 			Form{
 				Title: "features",
 				Form: []Form{
+					Form{
+						Title: "api",
+						Elmnts: []FormElement{
+							FormElement{Name: "enable", Type: "boolean", Default: true, Description: "Enable/Disable the API"},
+							FormElement{Name: "api_key", Type: "long_text", Description: "Format: '[mandatory:key] [optional:hostname]'. The hostname is used to enabled CORS for your application.", Placeholder: "foobar *.filestash.app"},
+						},
+					},
 					Form{
 						Title: "share",
 						Elmnts: []FormElement{
@@ -131,7 +138,7 @@ func NewConfiguration() Configuration {
 }
 
 func (this Form) MarshalJSON() ([]byte, error) {
-	return []byte(this.toJSON(func(el FormElement) string {
+	return []byte(this.ToJSON(func(el FormElement) string {
 		a, e := json.Marshal(el)
 		if e != nil {
 			return ""
@@ -140,7 +147,7 @@ func (this Form) MarshalJSON() ([]byte, error) {
 	})), nil
 }
 
-func (this Form) toJSON(fn func(el FormElement) string) string {
+func (this Form) ToJSON(fn func(el FormElement) string) string {
 	formatKey := func(str string) string {
 		return strings.Replace(str, " ", "_", -1)
 	}
@@ -165,7 +172,7 @@ func (this Form) toJSON(fn func(el FormElement) string) string {
 		if i == 0 && len(this.Elmnts) == 0 {
 			ret = fmt.Sprintf("%s{", ret)
 		}
-		ret = ret + this.Form[i].toJSON(fn)
+		ret = ret + this.Form[i].ToJSON(fn)
 		if i == len(this.Form)-1 {
 			ret = fmt.Sprintf("%s}", ret)
 		}
@@ -285,57 +292,45 @@ func (this *Configuration) Initialise() {
 	}
 	if env := os.Getenv("APPLICATION_URL"); env != "" {
 		shouldSave = true
-		this.Get("general.host").Set(env).String()
+		_ = this.Get("general.host").Set(env).String()
 	}
 	if this.Get("general.secret_key").String() == "" {
 		shouldSave = true
 		key := RandomString(16)
 		this.Get("general.secret_key").Set(key)
 	}
-
 	if len(this.Conn) == 0 {
 		this.Conn = []map[string]interface{}{
 			map[string]interface{}{
-				"type":  "webdav",
-				"label": "WebDav",
-			},
-			map[string]interface{}{
-				"type":  "ftp",
-				"label": "FTP",
-			},
-			map[string]interface{}{
 				"type":  "sftp",
 				"label": "SFTP",
-			},
-			map[string]interface{}{
-				"type":  "git",
-				"label": "GIT",
 			},
 			map[string]interface{}{
 				"type":  "s3",
 				"label": "S3",
 			},
 			map[string]interface{}{
-				"type":  "dropbox",
-				"label": "Dropbox",
+				"type":  "ftp",
+				"label": "FTP",
 			},
 			map[string]interface{}{
-				"type":  "gdrive",
-				"label": "Drive",
+				"type":  "webdav",
+				"label": "WebDAV",
 			},
 		}
 		shouldSave = true
 	}
+
 	if shouldSave {
 		this.Save()
 	}
 	InitSecretDerivate(this.Get("general.secret_key").String())
 }
 
-func (this Configuration) Save() Configuration {
+func (this *Configuration) Save() {
 	// convert config data to an appropriate json struct
-	form := append(this.form, Form{Title: "connections"})
-	v := Form{Form: form}.toJSON(func(el FormElement) string {
+	form := append(this.Form, Form{Title: "connections"})
+	v := Form{Form: form}.ToJSON(func(el FormElement) string {
 		a, e := json.Marshal(el.Value)
 		if e != nil {
 			return "null"
@@ -347,10 +342,9 @@ func (this Configuration) Save() Configuration {
 	if err := SaveConfig(PrettyPrint([]byte(v))); err != nil {
 		Log.Error("config::save %s", err.Error())
 	}
-	return this
 }
 
-func (this Configuration) Export() interface{} {
+func (this *Configuration) Export() interface{} {
 	return struct {
 		Editor                  string            `json:"editor"`
 		ForkButton              bool              `json:"fork_button"`
@@ -434,7 +428,7 @@ func (this *Configuration) Get(key string) *Configuration {
 	this.mu.Lock()
 	tmp := this.cache.Get(key)
 	if tmp == nil {
-		this.currentElement = traverse(&this.form, strings.Split(key, "."))
+		this.currentElement = traverse(&this.Form, strings.Split(key, "."))
 		this.cache.Set(key, this.currentElement)
 	} else {
 		this.currentElement = tmp.(*FormElement)
@@ -468,11 +462,11 @@ func (this *Configuration) Default(value interface{}) *Configuration {
 }
 
 func (this *Configuration) Set(value interface{}) *Configuration {
+	this.mu.Lock()
 	if this.currentElement == nil {
 		return this
 	}
 
-	this.mu.Lock()
 	this.cache.Clear()
 	if this.currentElement.Value != value {
 		this.currentElement.Value = value
@@ -482,7 +476,7 @@ func (this *Configuration) Set(value interface{}) *Configuration {
 	return this
 }
 
-func (this Configuration) String() string {
+func (this *Configuration) String() string {
 	val := this.Interface()
 	switch val.(type) {
 	case string:
@@ -493,7 +487,7 @@ func (this Configuration) String() string {
 	return ""
 }
 
-func (this Configuration) Int() int {
+func (this *Configuration) Int() int {
 	val := this.Interface()
 	switch val.(type) {
 	case float64:
@@ -506,7 +500,7 @@ func (this Configuration) Int() int {
 	return 0
 }
 
-func (this Configuration) Bool() bool {
+func (this *Configuration) Bool() bool {
 	val := this.Interface()
 	switch val.(type) {
 	case bool:
@@ -515,7 +509,7 @@ func (this Configuration) Bool() bool {
 	return false
 }
 
-func (this Configuration) Interface() interface{} {
+func (this *Configuration) Interface() interface{} {
 	if this.currentElement == nil {
 		return nil
 	}
@@ -526,8 +520,8 @@ func (this Configuration) Interface() interface{} {
 	return val
 }
 
-func (this Configuration) MarshalJSON() ([]byte, error) {
-	form := this.form
+func (this *Configuration) MarshalJSON() ([]byte, error) {
+	form := this.Form
 	form = append(form, Form{
 		Title: "constant",
 		Elmnts: []FormElement{

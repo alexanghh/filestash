@@ -17,3 +17,6 @@ services:
     container_name: filestash_oods
     image: onlyoffice/documentserver
     restart: always
+    security_opt:
+      - seccomp:unconfined
+

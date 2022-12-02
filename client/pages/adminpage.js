@@ -7,7 +7,7 @@ import { Icon, LoadingPage, CSSTransition } from "../components/";
 import { Admin } from "../model";
 import { notify } from "../helpers/";
 import {
-    HomePage, BackendPage, SettingsPage, LogPage, SetupPage, LoginPage,
+    HomePage, BackendPage, SettingsPage, AboutPage, LogPage, SetupPage, LoginPage,
 } from "./adminpage/";
 
 function AdminOnly(WrappedComponent) {
@@ -21,6 +21,7 @@ function AdminOnly(WrappedComponent) {
                 setIsAdmin(t);
             }).catch((err) => {
                 notify.send("Error: " + (err && err.message), "error");
+                setIsAdmin(false);
             });
         };
 
@@ -60,6 +61,9 @@ export default AdminOnly((props) => {
                         <Route
                             path={match.url + "/logs"}
                             render={() => <LogPage isSaving={setIsSaving}/>} />
+                        <Route
+                            path={match.url + "/about"}
+                            render={() => <AboutPage />} />
                         <Route path={match.url + "/setup"} component={SetupPage} />
                         <Route path={match.url} component={HomePage} />
                     </Switch>
@@ -70,6 +74,14 @@ export default AdminOnly((props) => {
 });
 
 function SideMenu(props) {
+    const [version, setVersion] = useState(null);
+    useEffect(() => {
+        const controller = new AbortController();
+        fetch("/about", { signal: controller.signal }).then((r) => {
+            setVersion(r.headers.get("X-Powered-By").replace(/^Filestash\/([v\.0-9]*).*$/, "$1"))
+        })
+        return () => controller.abort();
+    }, []);
     return (
         <div className="component_menu_sidebar no-select">
             {
@@ -100,6 +112,11 @@ function SideMenu(props) {
                 <li>
                     <NavLink activeClassName="active" to={props.url + "/logs"}>
                         Logs
+                    </NavLink>
+                </li>
+                <li className="version">
+                    <NavLink activeClassName="active" to={props.url + "/about"}>
+                        { version }
                     </NavLink>
                 </li>
             </ul>

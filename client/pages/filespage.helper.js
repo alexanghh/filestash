@@ -1,5 +1,5 @@
 import { Files } from "../model/";
-import { notify, upload } from "../helpers/";
+import { notify, upload, randomString } from "../helpers/";
 import Path from "path";
 import { Observable } from "rxjs/Observable";
 import { t } from "../locales/";
@@ -236,16 +236,6 @@ export const onUpload = function(path, e) {
 
     extractFiles.then((files) => upload.add(path, files));
 
-    // adapted from: https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
-    function _rand_id() {
-        function s4() {
-            return Math.floor((1 + Math.random()) * 0x10000)
-                .toString(16)
-                .substring(1);
-        }
-        return s4() + s4() + s4() + s4();
-    }
-
     function extract_upload_directory_the_way_that_works_but_non_official(items, files = []) {
         const traverseDirectory = (item, _files, parent_id) => {
             const file = {
@@ -266,7 +256,7 @@ export const onUpload = function(path, e) {
             } else if (item.isDirectory) {
                 file.type = "directory";
                 file.path += "/";
-                file._id = _rand_id();
+                file._id = randomString();
                 if (parent_id) file._prior = parent_id;
                 _files.push(file);
 
@@ -295,7 +285,9 @@ export const onUpload = function(path, e) {
         return Promise.all(
             Array.prototype.slice.call(items).map((item) => {
                 if (typeof item.webkitGetAsEntry === "function") {
-                    return traverseDirectory(item.webkitGetAsEntry(), files.slice(0));
+                    const entry = item.webkitGetAsEntry();
+                    if(entry === null) return Promise.resolve([]);
+                    return traverseDirectory(entry, files.slice(0));
                 }
             }).filter((e) => e),
         ).then((res) => Promise.resolve([].concat.apply([], res)));

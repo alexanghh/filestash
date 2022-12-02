@@ -85,7 +85,7 @@ func (s S3Backend) LoginForm() Form {
 			},
 			FormElement{
 				Name:        "secret_access_key",
-				Type:        "text",
+				Type:        "password",
 				Placeholder: "Secret Access Key*",
 			},
 			FormElement{
