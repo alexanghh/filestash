@@ -18,8 +18,8 @@ clean_frontend:
 
 build_test:
 	sed -i "s/plg_starter_http\"/plg_starter_https\"/g" server/plugin/index.go
-	make build_frontend
-	make build_backend
+	make all
+	sudo setcap CAP_NET_BIND_SERVICE=+eip dist/filestash
 
 build_make_image:
 	sed -i "s/plg_starter_https\"/plg_starter_http\"/g" server/plugin/index.go
@@ -32,8 +32,7 @@ build_make_image:
 BUILD_DATE=$(shell date '+%Y%m%d-%H%M')
 build_deploy_image:
 	sed -i "s/plg_starter_https\"/plg_starter_http\"/g" server/plugin/index.go
-	make build_frontend
-	make build_backend
+	make all
 	$(info BUILD_DATE = $(BUILD_DATE))
 	docker pull machines/filestash
 	docker pull ${USER}/filestash
