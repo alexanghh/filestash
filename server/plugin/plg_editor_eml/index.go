@@ -215,7 +215,7 @@ func convertEml(path string, eml io.Reader) (string, error) {
 		this.classList.toggle("active");
 		var content = this.nextElementSibling;
 		if (content.style.display === "block") {
-		  content.style.display = "nofiles/ne";
+		  content.style.display = "none";
 		} else {
 		  content.style.display = "block";
 		}
