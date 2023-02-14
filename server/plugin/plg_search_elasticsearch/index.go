@@ -374,7 +374,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	} else if path == "*" {
 		for i := range pathChildren {
 			if pathChildren[i].IsDir() {
-				indexes = append(indexes, this.IndexPrefix+pathChildren[i].Name()+this.IndexSuffix)
+				indexes = append(indexes, this.IndexPrefix+strings.ToLower(pathChildren[i].Name())+this.IndexSuffix)
 			}
 		}
 		Log.Debug("ES::query root search indexes: %s", strings.Join(indexes, ","))
