@@ -365,6 +365,7 @@ func (this *Configuration) Export() interface{} {
 		AuthMiddleware          interface{}       `json:"auth"`
 		MaxResultSize           int               `json:"max_result_size"`
 		EnableSearchTitle       bool              `json:"enable_search_title"`
+		Thumbnailer             []string          `json:"thumbnailer"`
 	}{
 		Editor:                  this.Get("general.editor").String(),
 		ForkButton:              this.Get("general.fork_button").Bool(),
@@ -389,6 +390,16 @@ func (this *Configuration) Export() interface{} {
 				return ""
 			}
 			return this.Get("middleware.attribute_mapping.related_backend").String()
+		}(),
+		Thumbnailer: func() []string {
+			tMap := Hooks.Get.Thumbnailer()
+			tArray := make([]string, len(tMap))
+			i := 0
+			for key, _ := range tMap {
+				tArray[i] = key
+				i += 1
+			}
+			return tArray
 		}(),
 	}
 }
