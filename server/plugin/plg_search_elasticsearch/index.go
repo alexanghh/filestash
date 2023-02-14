@@ -26,7 +26,8 @@ type ElasticSearch struct {
 	SizeField    string
 	TimeField    string
 	NumFragment  int
-	//MaxAnalyzedOffset int
+	MaxAnalyzedOffset int
+	MaxAnalyzedOffsetSupported bool
 	MaxResultSize int
 }
 
@@ -103,7 +104,7 @@ func init() {
 		f.Id = "index"
 		f.Name = "index"
 		f.Type = "text"
-		f.Description = "Name of the Elasticsearch index. If empty, top level folder(bucket) is assumed to be the index name."
+		f.Description = "Name of the Elasticsearch index. If empty, top level folder (lower case) is assumed to be the index name."
 		f.Default = ""
 		f.Placeholder = "Eg: filestash_index"
 		if u := os.Getenv("ELASTICSEARCH_INDEX"); u != "" {
@@ -212,18 +213,18 @@ func init() {
 		f.Placeholder = "Eg: 5"
 		return f
 	})
-	//Config.Get("features.elasticsearch.max_analyzed_offset").Schema(func(f *FormElement) *FormElement {
-	//	if f == nil {
-	//		f = &FormElement{}
-	//	}
-	//	f.Id = "max_analyzed_offset"
-	//	f.Name = "max_analyzed_offset"
-	//	f.Type = "number"
-	//	f.Description = "Maximum number of characters in search result that will be analyzed for highlight. Setting this value too high will crash elasticsearch."
-	//	f.Default = 1000000
-	//	f.Placeholder = "Eg: 1000000"
-	//	return f
-	//})
+	Config.Get("features.elasticsearch.max_analyzed_offset").Schema(func(f *FormElement) *FormElement {
+		if f == nil {
+			f = &FormElement{}
+		}
+		f.Id = "max_analyzed_offset"
+		f.Name = "max_analyzed_offset"
+		f.Type = "number"
+		f.Description = "Maximum number of characters in search result that will be analyzed for highlight. Supported in ES version >= 7.12)"
+		f.Default = 1000000
+		f.Placeholder = "Eg: 1000000"
+		return f
+	})
 	Config.Get("features.elasticsearch.max_result_size").Schema(func(f *FormElement) *FormElement {
 		if f == nil {
 			f = &FormElement{}
@@ -322,17 +323,25 @@ func init() {
 	Log.Debug("ES::init Server: %s", r["version"].(map[string]interface{})["number"])
 	Log.Debug(strings.Repeat("~", 37))
 
+	// check es version to detect if MaxAnalyzedOffset is supported
+	major, minor, patch, _ := elasticsearch7.ParseElasticsearchVersion(r["version"].(map[string]interface{})["number"].(string))
+	maxAnalyzedOffsetSupported := false
+	if  major > 7 || (major == 7 && minor >= 12) {
+		maxAnalyzedOffsetSupported = true
+	}
+
 	es := &ElasticSearch{
-		Es7:          es7,
-		Index:        Config.Get("features.elasticsearch.index").String(),
-		IndexPrefix:  Config.Get("features.elasticsearch.index_prefix").String(),
-		IndexSuffix:  Config.Get("features.elasticsearch.index_suffix").String(),
-		PathField:    Config.Get("features.elasticsearch.field_path").String(),
-		ContentField: Config.Get("features.elasticsearch.field_content").String(),
-		SizeField:    Config.Get("features.elasticsearch.field_size").String(),
-		TimeField:    Config.Get("features.elasticsearch.field_time").String(),
-		NumFragment:  Config.Get("features.elasticsearch.num_fragment").Int(),
-		//MaxAnalyzedOffset: Config.Get("features.elasticsearch.max_analyzed_offset").Int(),
+		Es7:          					es7,
+		Index:        					Config.Get("features.elasticsearch.index").String(),
+		IndexPrefix:  					Config.Get("features.elasticsearch.index_prefix").String(),
+		IndexSuffix:  					Config.Get("features.elasticsearch.index_suffix").String(),
+		PathField:    					Config.Get("features.elasticsearch.field_path").String(),
+		ContentField: 					Config.Get("features.elasticsearch.field_content").String(),
+		SizeField:    					Config.Get("features.elasticsearch.field_size").String(),
+		TimeField:    					Config.Get("features.elasticsearch.field_time").String(),
+		NumFragment:  					Config.Get("features.elasticsearch.num_fragment").Int(),
+		MaxAnalyzedOffset: 				Config.Get("features.elasticsearch.max_analyzed_offset").Int(),
+		MaxAnalyzedOffsetSupported:		maxAnalyzedOffsetSupported,
 		MaxResultSize: Config.Get("features.elasticsearch.max_result_size").Int(),
 	}
 
@@ -393,6 +402,9 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 				this.ContentField: map[string]interface{}{},
 			},
 		},
+	}
+	if this.MaxAnalyzedOffsetSupported {
+		query["highlight"].(map[string]interface{})["max_analyzed_offset"] = this.MaxAnalyzedOffset
 	}
 
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
