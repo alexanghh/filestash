@@ -1,5 +1,7 @@
 all:
-	make build_backend
+	make build_init
+	make build_frontend
+	GOARCH=amd64 GOOS=linux make build_backend
 
 build_init:
 	find server/plugin/plg_* -type f -name "install.sh" -exec {} \;
@@ -9,7 +11,10 @@ build_frontend:
 	NODE_ENV=production npm run build
 
 build_backend:
-	PKG_CONFIG_PATH=/usr/local/lib/pkgconfig/ CGO_CFLAGS_ALLOW='-fopenmp' go build -mod=vendor --tags "fts5" -ldflags "-X github.com/mickael-kerjean/filestash/server/common.BUILD_DATE=`date -u +%Y%m%d` -X github.com/mickael-kerjean/filestash/server/common.BUILD_REF=`git rev-parse HEAD`" -o dist/filestash server/main.go
+	CGO_ENABLED=0 go build -ldflags="-extldflags=-static" -mod=vendor --tags "fts5" -o dist/filestash server/main.go
+
+clean_frontend:
+	rm -rf server/ctrl/static/www/
 
 build_test:
 	sed -i "s/plg_starter_http\"/plg_starter_https\"/g" server/plugin/index.go

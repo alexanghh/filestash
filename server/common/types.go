@@ -56,6 +56,10 @@ type ILogger interface {
 	SetVisibility(str string)
 }
 
+type IThumbnailer interface {
+	Generate(io.ReadCloser, *App, *http.ResponseWriter, *http.Request) (io.ReadCloser, error)
+}
+
 type IAuditPlugin interface {
 	Query(ctx *App, searchParams map[string]string) (AuditQueryResult, error)
 }

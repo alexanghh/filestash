@@ -1,6 +1,7 @@
 package plg_backend_s3
 
 import (
+	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -16,14 +17,16 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var S3Cache AppCache
 
 type S3Backend struct {
-	client *s3.S3
-	config *aws.Config
-	params map[string]string
+	client  *s3.S3
+	config  *aws.Config
+	params  map[string]string
+	context context.Context
 }
 
 func init() {
@@ -38,6 +41,9 @@ func (s S3Backend) Init(params map[string]string, app *App) (IBackend, error) {
 
 	if params["region"] == "" {
 		params["region"] = "us-east-2"
+		if strings.HasSuffix(params["endpoint"], ".cloudflarestorage.com") {
+			params["region"] = "auto"
+		}
 	}
 	creds := []credentials.Provider{}
 	if params["access_key_id"] != "" || params["secret_access_key"] != "" {
@@ -63,9 +69,10 @@ func (s S3Backend) Init(params map[string]string, app *App) (IBackend, error) {
 	}
 
 	backend := &S3Backend{
-		config: config,
-		params: params,
-		client: s3.New(session.New(config)),
+		config:  config,
+		params:  params,
+		client:  s3.New(session.New(config)),
+		context: app.Context,
 	}
 	return backend, nil
 }
@@ -161,7 +168,9 @@ func (s S3Backend) Ls(path string) (files []os.FileInfo, err error) {
 	}
 	client := s3.New(s.createSession(p.bucket))
 
-	err = client.ListObjectsV2Pages(
+	startTime := time.Now()
+	err = client.ListObjectsV2PagesWithContext(
+		s.context,
 		&s3.ListObjectsV2Input{
 			Bucket:    aws.String(p.bucket),
 			Prefix:    aws.String(p.path),
@@ -185,7 +194,7 @@ func (s S3Backend) Ls(path string) (files []os.FileInfo, err error) {
 					FType: "directory",
 				})
 			}
-			return true
+			return time.Since(startTime) < 5*time.Second
 		})
 	return files, err
 }
@@ -433,9 +442,11 @@ func (s S3Backend) Save(path string, file io.Reader) error {
 }
 
 func (s S3Backend) createSession(bucket string) *session.Session {
-	params := s.params
-	params["bucket"] = bucket
-	c := S3Cache.Get(params)
+	newParams := map[string]string{"bucket": bucket}
+	for k, v := range s.params {
+		newParams[k] = v
+	}
+	c := S3Cache.Get(newParams)
 	if c == nil {
 		res, err := s.client.GetBucketLocation(&s3.GetBucketLocationInput{
 			Bucket: aws.String(bucket),
@@ -449,7 +460,7 @@ func (s S3Backend) createSession(bucket string) *session.Session {
 				s.config.Region = res.LocationConstraint
 			}
 		}
-		S3Cache.Set(params, s.config.Region)
+		S3Cache.Set(newParams, s.config.Region)
 	} else {
 		s.config.Region = c.(*string)
 	}

@@ -122,6 +122,20 @@ func (this Get) SearchEngine() ISearch {
 }
 
 /*
+ * The idea here is to enable plugin to register their own thumbnailing process, typically
+ * images but could also be videos, pdf, excel documents, ...
+ */
+var thumbnailer map[string]IThumbnailer = make(map[string]IThumbnailer)
+
+func (this Register) Thumbnailer(mimeType string, fn IThumbnailer) {
+	thumbnailer[mimeType] = fn
+}
+
+func (this Get) Thumbnailer() map[string]IThumbnailer {
+	return thumbnailer
+}
+
+/*
  * Pluggable Audit interface
  */
 var audit IAuditPlugin
@@ -177,6 +191,15 @@ func (this Get) CSS() string {
 }
 
 const OverrideVideoSourceMapper = "/overrides/video-transcoder.js"
+
+var afterload []func()
+
+func (this Register) Onload(fn func()) {
+	afterload = append(afterload, fn)
+}
+func (this Get) Onload() []func() {
+	return afterload
+}
 
 func init() {
 	Hooks.Register.FrontendOverrides(OverrideVideoSourceMapper)
