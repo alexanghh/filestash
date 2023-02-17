@@ -324,9 +324,9 @@ func init() {
 	Log.Debug(strings.Repeat("~", 37))
 
 	// check es version to detect if MaxAnalyzedOffset is supported
-	major, minor, patch, _ := elasticsearch7.ParseElasticsearchVersion(r["version"].(map[string]interface{})["number"].(string))
+	major, minor, _, err := elasticsearch7.ParseElasticsearchVersion(r["version"].(map[string]interface{})["number"].(string))
 	maxAnalyzedOffsetSupported := false
-	if  major > 7 || (major == 7 && minor >= 12) {
+	if  err == nil && (major > 7 || (major == 7 && minor >= 12)) {
 		maxAnalyzedOffsetSupported = true
 	}
 
