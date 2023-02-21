@@ -462,6 +462,15 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 		int(r["took"].(float64)),
 	)
 
+	Log.Debug(
+		"ES:Query search shards: %d total, %d successful, %d skipped, %d failed",
+		int(r["_shards"].(map[string]interface{})["total"].(float64)),
+		int(r["_shards"].(map[string]interface{})["successful"].(float64)),
+		int(r["_shards"].(map[string]interface{})["skipped"].(float64)),
+		int(r["_shards"].(map[string]interface{})["failed"].(float64)),
+	)
+	Log.Debug("ES::Query search hits response count: %d", len(r["hits"].(map[string]interface{})["hits"].([]interface{})))
+
 	files := []IFile{}
 
 	// Print the ID and document source for each hit.
@@ -500,6 +509,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 			FHits:    hits,
 		})
 	}
+	Log.Debug("ES::Query search file return count: %d", len(files))
 	Log.Debug(strings.Repeat("=", 37))
 
 	return files, nil
