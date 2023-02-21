@@ -18,7 +18,7 @@ import InfiniteScroll from "react-infinite-scroller";
 import { t } from "../locales/";
 
 const PAGE_NUMBER_INIT = 2;
-const LOAD_PER_SCROLL = 48;
+const LOAD_PER_SCROLL = 50;
 
 // usefull when user press the back button while keeping the current context
 const LAST_PAGE_PARAMS = {
