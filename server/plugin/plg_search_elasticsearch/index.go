@@ -384,7 +384,7 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	// Path must be keyword type to restrict search. Otherwise, search may be global.
 	var buf bytes.Buffer
 	query := map[string]interface{}{
-		"size": this.MaxResultSize,
+		"size": int(float64(this.MaxResultSize) * 1.1),
 		"query": map[string]interface{}{
 			"query_string": map[string]interface{}{
 				"fields": [2]string{this.ContentField, this.PathField},
@@ -474,7 +474,12 @@ func (this ElasticSearch) Query(app App, path string, keyword string) ([]IFile, 
 	files := []IFile{}
 
 	// Print the ID and document source for each hit.
-	for _, hit := range r["hits"].(map[string]interface{})["hits"].([]interface{}) {
+	results :=  r["hits"].(map[string]interface{})["hits"].([]interface{})
+	result_cap := len(results)
+	if result_cap >  this.MaxResultSize {
+		result_cap = this.MaxResultSize
+	}
+	for _, hit := range results[0:result_cap] {
 
 		resPath := hit.(map[string]interface{})["fields"].(map[string]interface{})[this.PathField].([]interface{})[0].(string)
 		size := int64(hit.(map[string]interface{})["fields"].(map[string]interface{})[this.SizeField].([]interface{})[0].(float64))
